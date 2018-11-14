@@ -1,0 +1,9 @@
+devel/
+logs/
+build/
+
+# Dynamic reconfigure
+*cfgc
+/cfg/*.py
+
+CATKIN_IGNORE
