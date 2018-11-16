@@ -2,6 +2,8 @@ devel/
 logs/
 build/
 
+out/
+
 # Dynamic reconfigure
 *cfgc
 /cfg/*.py
