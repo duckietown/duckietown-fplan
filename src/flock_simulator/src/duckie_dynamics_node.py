@@ -8,9 +8,16 @@ class DuckieDynamicsNode(object):
     def __init__(self):
         self.node_name = rospy.get_name()
 
+        self.duckies_vel = {}
+
+        # Parameters
+        self.max_acc = 10  # Tiles / s^2
+
         # Subscribers
         self.sub_commands = rospy.Subscriber(
             "~commands", String, self.cbCommands, queue_size=1)
+        self.sub_state = rospy.Subscriber(
+            "~state", String, self.cbState, queue_size=1)
 
         # Publishers
         self.pub_locations = rospy.Publisher(
@@ -29,6 +36,10 @@ class DuckieDynamicsNode(object):
         msg_locations = String()
         msg_locations.data = locations
         self.pub_locations.publish(msg_locations)
+
+    def cbState(self, data):
+        # Get duckies and their locations
+        pass
 
     def onShutdown(self):
         rospy.loginfo("[%s] Shutdown." % (self.node_name))
