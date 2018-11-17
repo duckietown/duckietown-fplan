@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 import rospy
-import random
 import numpy as np
 import networkx as nx
 import duckietown_world as dw
+import duckie_dynamics as dd
 from std_msgs.msg import String
 
 
@@ -24,7 +24,7 @@ class StateManagerNode(object):
         self.map_graph = self.generateMapGraph()
 
         # State of duckies
-        self.duckies = self.spawnDuckies()
+        self.duckies = dd.spawnDuckies(self.n_duckies, self.map_graph)
 
         # Paths
         self.paths = {}
@@ -47,12 +47,14 @@ class StateManagerNode(object):
     def updateState(self):
         # Update every duckie
         for duckie in self.duckies:
-            vel_des = self.getDesiredVelocity(duckie)
+            vel_des = dd.getDesiredVelocity(self.duckies, self.map_graph.nodes,
+                                            self.paths[duckie], self.max_vel,
+                                            duckie)
             vel = self.duckies[duckie]['velocity']
             vel_new = vel + np.sign(vel_des - vel) * self.max_acc * self.dt
             traveled = (vel + vel_new) / 2 * self.dt
             self.duckies[duckie]['velocity'] = vel_new
-            self.setNewPose(duckie, traveled)
+            dd.setNewPose(self.duckies[duckie], self.paths[duckie], traveled)
 
         # Update nodes with duckies
         for node in self.map_graph:
@@ -63,160 +65,6 @@ class StateManagerNode(object):
             self.map_graph.nodes['tile-%d-%d' %
                                  (coord[0],
                                   coord[1])]['duckies'].append(duckie)
-
-    def getNewPose(self, pose, distance, tile, action, heading):
-        if action == 'straight':
-            pose_new = {
-                'x': pose['x'] + heading[0] * distance,
-                'y': pose['y'] + heading[1] * distance,
-                'phi': pose['phi']
-            }
-        elif action == 'curve_left':
-            phi_new = np.unwrap(pose['phi'] + distance / 0.75)
-            center = {
-                '[0, 1]': [tile[0] - 0.5, tile[1] + 0.5],
-                '[1, 0]': [tile[0] + 0.5, tile[1] + 0.5],
-                '[0, -1]': [tile[0] + 0.5, tile[1] - 0.5],
-                '[-1, 0]': [tile[0] - 0.5, tile[1] - 0.5]
-            }
-            pose_new = {
-                'x': center[str(heading)][0] + 0.75 * np.cos(phi_new),
-                'y': center[str(heading)][1] + 0.75 * np.sin(phi_new),
-                'phi': phi_new
-            }
-        elif action == 'curve_right':
-            phi_new = np.unwrap(pose['phi'] - distance / 0.25)
-            center = {
-                '[0, 1]': [tile[0] + 0.5, tile[1] + 0.5],
-                '[1, 0]': [tile[0] + 0.5, tile[1] - 0.5],
-                '[0, -1]': [tile[0] - 0.5, tile[1] - 0.5],
-                '[-1, 0]': [tile[0] - 0.5, tile[1] + 0.5]
-            }
-            pose_new = {
-                'x': center[str(heading)][0] + 0.25 * np.cos(phi_new),
-                'y': center[str(heading)][1] + 0.25 * np.sin(phi_new),
-                'phi': phi_new
-            }
-        return pose_new
-
-    def setNewPose(self, duckie, distance):
-        pose = self.duckies[duckie]['pose']
-        action = self.duckies[duckie]['action']
-        heading = self.duckies[duckie]['heading']
-        tile = np.around([pose['x'], pose['y']]).tolist()
-        pose_new = self.getNewPose(pose, distance, tile, action, heading)
-        tile_new = np.around([pose_new['x'], pose_new['y']]).tolist()
-
-        if tile_new == tile:
-            self.duckies[duckie]['pose'] = pose_new
-            return
-
-        heading_new = self.getNewHeading(self.paths[duckie])
-        action_new = self.getNewAction(heading, heading_new)
-
-        phi_trans = {
-            '[0, 1]': 0,
-            '[1, 0]': -1.0 / 2.0 * np.pi,
-            '[0, -1]': np.pi,
-            '[-1, 0]': 1.0 / 2.0 * np.pi
-        }
-
-        pose_trans = {
-            'x': tile[0] + heading[0] * 0.5,
-            'y': tile[1] + heading[1] * 0.5,
-            'phi': phi_trans[str(heading)]
-        }
-
-        if action == 'straight':
-            distance_over = (pose_new['x'] - pose_trans['x']) + (
-                pose_new['y'] - pose_trans['y'])
-        elif action == 'curve_left':
-            distance_over = np.abs(
-                pose_new['phi'] - phi_trans[str(heading)]) * 0.75
-        else:
-            distance_over = np.abs(
-                pose_new['phi'] - phi_trans[str(heading)]) * 0.25
-
-        pose_new = self.getNewPose(pose_trans, distance - distance_over,
-                                   tile_new, action_new, heading_new)
-
-        self.duckies[duckie]['pose'] = pose_new
-        self.duckies[duckie]['action'] = action_new
-        self.duckies[duckie]['heading'] = heading_new
-
-    def getDesiredVelocity(self, duckie):
-        pose = self.duckies[duckie]['pose']
-        tile = np.around([pose['x'], pose['y']]).tolist()
-        heading = self.duckies[duckie]['heading']
-
-        # Check for duckies in front
-        current_tile = 'tile-%d-%d' % (tile[0], tile[1])
-        front_tile = 'tile-%d-%d' % (tile[0] + heading[0],
-                                     tile[1] + heading[1])
-        current_tile_duckies = self.map_graph.node[current_tile]['duckies']
-        front_tile_duckies = self.map_graph.node[front_tile]['duckies']
-        both_tiles_duckies = current_tile_duckies + front_tile_duckies
-        if both_tiles_duckies:
-            for tile_duckie in both_tiles_duckies:
-                diff = [
-                    self.duckies[tile_duckie]['pose']['x'] - pose['x'],
-                    self.duckies[tile_duckie]['pose']['y'] - pose['y']
-                ]
-                distance_in_front = heading[0] * diff[0] + heading[1] * diff[1]
-                if np.linalg.norm(diff) < 0.5 and distance_in_front > 0:
-                    return 0
-
-        # Check for right of way
-        on_intersection = self.map_graph.nodes[current_tile][
-            'type'] == 'intersection'
-        next_tile_intersection = len(
-            self.map_graph.nodes[front_tile]['type']) == 'intersection'
-        if on_intersection or not next_tile_intersection or not front_tile_duckies:
-            return self.max_vel
-
-        heading_next = self.getNewHeading(self.paths[duckie])
-        action_next = self.getNewAction(heading, heading_next)
-        # For right curves, only check for duckies on intersection heading same direction
-        if action_next == 'curve_right':
-            for tile_duckie in front_tile_duckies:
-                if tile_duckie['heading'] == heading_next:
-                    return 0
-        # Check for duckies on intersection heading to your right or straight
-        right_heading = [heading[1], -heading[0]]
-        for tile_duckie in front_tile_duckies:
-            if tile_duckie['heading'] == heading or tile_duckie['heading'] == right_heading:
-                return 0
-        # Check for duckies on the right
-        right_coord = [
-            tile[0] + heading[0] + right_heading[0],
-            tile[1] + heading[1] + right_heading[1]
-        ]
-        right_tile = 'tile-%d-%d' % (right_coord[0], right_coord[1])
-        right_tile_duckies = self.map_graph.node[right_tile]['duckies']
-        if right_tile_duckies:
-            right_duckie_heading = [-right_heading[0], -right_heading[1]]
-            for right_duckie in right_tile_duckies:
-                diff_from_mid = [
-                    right_duckie['pose']['x'] - right_coord[0],
-                    right_duckie['pose']['y'] - right_coord[1]
-                ]
-                dist_from_mid = right_duckie_heading[0] * diff_from_mid[0] + right_duckie_heading[1] * diff_from_mid[1]
-                if right_duckie['heading'] == right_duckie_heading and diff_from_mid > 0:
-                    return 0
-
-        return self.max_vel
-
-    def getNewHeading(self, path):
-        return [b - a for a, b in zip(path[0], path[1])]
-
-    def getNewAction(self, heading, heading_new):
-        heading_cross = np.cross(heading.append(0), heading_new.append(0))
-        if heading_cross[2] == 0:
-            return 'straight'
-        elif heading_cross[2] > 0:
-            return 'curve_left'
-        else:
-            return 'curve_right'
 
     def generateMapGraph(self):
         tilemap = self.map.children['tilemap']
@@ -261,52 +109,6 @@ class StateManagerNode(object):
                 graph.nodes[node]['type'] = 'curve'
             graph.nodes[node]['exits'] = exits
         return graph
-
-    def spawnDuckies(self):
-        duckies = {}
-        offset = {
-            '[0, 1]': [0.25, 0, 0],
-            '[1, 0]': [0, -0.25, -1.0 / 2.0 * np.pi],
-            '[0, -1]': [-0.25, 0, np.pi],
-            '[-1, 0]': [0, 0.25, 1.0 / 2.0 * np.pi]
-        }
-        for i in range(self.n_duckies):
-            spawnIsValid = False
-            while not spawnIsValid:
-                spawn_node = random.choice([
-                    node for node, data in self.map_graph.nodes(data=True)
-                    if data['type'] == 'straight'
-                ])
-                direction = random.choice(
-                    self.map_graph.nodes[spawn_node]['exits'])
-                pose = {
-                    'x':
-                    self.map_graph.nodes[spawn_node]['coord'][0] +
-                    offset[str(direction)][0],
-                    'y':
-                    self.map_graph.nodes[spawn_node]['coord'][1] +
-                    offset[str(direction)][1],
-                    'phi':
-                    offset[str(direction)][2]
-                }
-                coord = [pose['x'], pose['y']]
-                spawnIsValid = True
-                for duckie in duckies:
-                    duckie_coord = [
-                        duckies[duckie]['pose']['x'],
-                        duckies[duckie]['pose']['y']
-                    ]
-                    if np.linalg.norm(
-                            np.asarray(duckie_coord) - np.asarray(coord)) < 1:
-                        spawnIsValid = False
-            duckies['duckie-%d' % i] = {
-                'pose': pose,
-                'velocity': 0,
-                'action': 'straight',
-                'heading': direction
-            }
-            self.map_graph.nodes[spawn_node]['duckies'].append('duckie-%d' % i)
-        return duckies
 
     def cbPaths(self, data):
         # Store paths in self.paths
