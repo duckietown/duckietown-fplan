@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
+import random
 import numpy as np
 import networkx as nx
 import duckietown_world as dw
@@ -27,17 +28,14 @@ class StateManagerNode(object):
         self.duckies = dd.spawnDuckies(self.n_duckies, self.map_graph)
 
         # Paths
-        self.paths = {}
+        self.paths = self.generateAllPaths()
 
         # Subscribers
-        self.sub_requests = rospy.Subscriber(
-            '~requests', String, self.cbRequests, queue_size=1)
         self.sub_paths = rospy.Subscriber(
             '~paths', String, self.cbPaths, queue_size=1)
 
         # Publishers
         self.pub_state = rospy.Publisher('~state', String, queue_size=1)
-        self.pub_commands = rospy.Publisher('~commands', String, queue_size=1)
 
         # Timer
         self.isUpdating = False
@@ -47,6 +45,16 @@ class StateManagerNode(object):
     def updateState(self):
         # Update every duckie
         for duckie in self.duckies:
+            # Check path
+            path_node = self.paths[duckie][0]
+            if duckie in self.map_graph.nodes['tile-%d-%d' %
+                                              (path_node[0],
+                                               path_node[1])]['duckies']:
+                self.paths[duckie].pop(0)
+            if len(self.paths[duckie]) < 3:
+                self.generatePath(duckie)
+
+            # Update duckie state
             vel_des = dd.getDesiredVelocity(self.duckies, self.map_graph.nodes,
                                             self.paths[duckie], self.max_vel,
                                             duckie)
@@ -54,14 +62,16 @@ class StateManagerNode(object):
             vel_new = vel + np.sign(vel_des - vel) * self.max_acc * self.dt
             traveled = (vel + vel_new) / 2 * self.dt
             self.duckies[duckie]['velocity'] = vel_new
-            dd.setNewPose(self.duckies[duckie], self.paths[duckie], traveled)
+            state_new = dd.getNewDuckieState(self.duckies[duckie],
+                                             self.paths[duckie], traveled)
+            self.duckies[duckie].update(state_new)
 
         # Update nodes with duckies
         for node in self.map_graph:
             self.map_graph.nodes[node]['duckies'][:] = []
         for duckie in self.duckies:
             pose = self.duckies[duckie]['pose']
-            coord = np.around([pose['x'], pose['y']]).tolist()
+            coord = [round(pose['x']), round(pose['y'])]
             self.map_graph.nodes['tile-%d-%d' %
                                  (coord[0],
                                   coord[1])]['duckies'].append(duckie)
@@ -110,13 +120,48 @@ class StateManagerNode(object):
             graph.nodes[node]['exits'] = exits
         return graph
 
+    def generateAllPaths(self):
+        paths = {}
+        for duckie in self.duckies:
+            paths[duckie] = self.generatePath(duckie)
+        return paths
+
+    def generatePath(self, duckie):
+        pose = self.duckies[duckie]['pose']
+        heading = self.duckies[duckie]['heading']
+        current_pos = [round(pose['x']), round(pose['y'])]
+        if hasattr(self, 'paths') and self.paths[duckie]:
+            path_start = self.paths[duckie][0]
+        else:
+            path_start = [
+                current_pos[0] + heading[0], current_pos[1] + heading[1]
+            ]
+        path_node1 = current_pos
+        while path_node1 == current_pos:
+            random_direction = random.choice(
+                self.map_graph.nodes['tile-%d-%d' % (path_start[0],
+                                                     path_start[1])]['exits'])
+            path_node1 = [
+                path_start[0] + random_direction[0],
+                path_start[1] + random_direction[1]
+            ]
+        path_node2 = path_start
+        while path_node2 == path_start:
+            random_direction = random.choice(
+                self.map_graph.nodes['tile-%d-%d' % (path_node1[0],
+                                                     path_node1[1])]['exits'])
+            path_node2 = [
+                path_node1[0] + random_direction[0],
+                path_node1[1] + random_direction[1]
+            ]
+
+        return [path_start, path_node1, path_node2]
+
     def cbPaths(self, data):
+        # Check for validity
+        # Generate path for invalid
         # Store paths in self.paths
         pass
-
-    def cbRequests(self, data):
-        # Do something with requests
-        print(data)
 
     def cbTimer(self, event):
         # Don't update if last timer callback hasn't finished
@@ -130,6 +175,7 @@ class StateManagerNode(object):
         self.isUpdating = False
 
         # Publish
+        print(self.duckies)
         msg_state = String()
         self.pub_state.publish(msg_state)
 

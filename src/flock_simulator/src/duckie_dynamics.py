@@ -2,7 +2,7 @@ import random
 import numpy as np
 
 
-def getNewPose(pose, distance, tile, action, heading):
+def calculatePose(pose, distance, tile, action, heading):
     if action == 'straight':
         pose_new = {
             'x': pose['x'] + heading[0] * distance,
@@ -10,7 +10,8 @@ def getNewPose(pose, distance, tile, action, heading):
             'phi': pose['phi']
         }
     elif action == 'curve_left':
-        phi_new = np.unwrap(pose['phi'] + distance / 0.75)
+        phi_new = pose['phi'] + distance / 0.75
+        phi_new = (phi_new + np.pi) % (2 * np.pi) - np.pi
         center = {
             '[0, 1]': [tile[0] - 0.5, tile[1] + 0.5],
             '[1, 0]': [tile[0] + 0.5, tile[1] + 0.5],
@@ -18,12 +19,16 @@ def getNewPose(pose, distance, tile, action, heading):
             '[-1, 0]': [tile[0] - 0.5, tile[1] - 0.5]
         }
         pose_new = {
-            'x': center[str(heading)][0] + 0.75 * np.cos(phi_new),
-            'y': center[str(heading)][1] + 0.75 * np.sin(phi_new),
-            'phi': phi_new
+            'x':
+            center[str([int(x) for x in heading])][0] + 0.75 * np.cos(phi_new),
+            'y':
+            center[str([int(x) for x in heading])][1] + 0.75 * np.sin(phi_new),
+            'phi':
+            phi_new
         }
     elif action == 'curve_right':
-        phi_new = np.unwrap(pose['phi'] - distance / 0.25)
+        phi_new = pose['phi'] - distance / 0.25
+        phi_new = (phi_new + np.pi) % (2 * np.pi) - np.pi
         center = {
             '[0, 1]': [tile[0] + 0.5, tile[1] + 0.5],
             '[1, 0]': [tile[0] + 0.5, tile[1] - 0.5],
@@ -31,24 +36,26 @@ def getNewPose(pose, distance, tile, action, heading):
             '[-1, 0]': [tile[0] - 0.5, tile[1] + 0.5]
         }
         pose_new = {
-            'x': center[str(heading)][0] + 0.25 * np.cos(phi_new),
-            'y': center[str(heading)][1] + 0.25 * np.sin(phi_new),
-            'phi': phi_new
+            'x':
+            center[str([int(x) for x in heading])][0] + 0.25 * np.cos(phi_new),
+            'y':
+            center[str([int(x) for x in heading])][1] + 0.25 * np.sin(phi_new),
+            'phi':
+            phi_new
         }
     return pose_new
 
 
-def setNewPose(duckie, path, distance):
+def getNewDuckieState(duckie, path, distance):
     pose = duckie['pose']
     action = duckie['action']
     heading = duckie['heading']
-    tile = np.around([pose['x'], pose['y']]).tolist()
-    pose_new = getNewPose(pose, distance, tile, action, heading)
-    tile_new = np.around([pose_new['x'], pose_new['y']]).tolist()
+    tile = [round(pose['x']), round(pose['y'])]
+    pose_new = calculatePose(pose, distance, tile, action, heading)
+    tile_new = [round(pose_new['x']), round(pose_new['y'])]
 
     if tile_new == tile:
-        duckie['pose'] = pose_new
-        return
+        return {'pose': pose_new, 'action': action, 'heading': heading}
 
     heading_new = getNewHeading(path)
     action_new = getNewAction(heading, heading_new)
@@ -63,7 +70,7 @@ def setNewPose(duckie, path, distance):
     pose_trans = {
         'x': tile[0] + heading[0] * 0.5,
         'y': tile[1] + heading[1] * 0.5,
-        'phi': phi_trans[str(heading)]
+        'phi': phi_trans[str([int(x) for x in heading])]
     }
 
     if action == 'straight':
@@ -71,22 +78,20 @@ def setNewPose(duckie, path, distance):
             pose_new['y'] - pose_trans['y'])
     elif action == 'curve_left':
         distance_over = np.abs(
-            pose_new['phi'] - phi_trans[str(heading)]) * 0.75
+            pose_new['phi'] - phi_trans[str([int(x) for x in heading])]) * 0.75
     else:
         distance_over = np.abs(
-            pose_new['phi'] - phi_trans[str(heading)]) * 0.25
+            pose_new['phi'] - phi_trans[str([int(x) for x in heading])]) * 0.25
 
-    pose_new = getNewPose(pose_trans, distance - distance_over, tile_new,
-                          action_new, heading_new)
+    pose_new = calculatePose(pose_trans, distance - distance_over, tile_new,
+                             action_new, heading_new)
 
-    duckie['pose'] = pose_new
-    duckie['action'] = action_new
-    duckie['heading'] = heading_new
+    return {'pose': pose_new, 'action': action_new, 'heading': heading_new}
 
 
 def getDesiredVelocity(duckies, nodes, path, max_vel, duckie):
     pose = duckies[duckie]['pose']
-    tile = np.around([pose['x'], pose['y']]).tolist()
+    tile = [round(pose['x']), round(pose['y'])]
     heading = duckies[duckie]['heading']
 
     # Check for duckies in front
@@ -149,7 +154,7 @@ def getNewHeading(path):
 
 
 def getNewAction(heading, heading_new):
-    heading_cross = np.cross(heading.append(0), heading_new.append(0))
+    heading_cross = np.cross(heading + [0], heading_new + [0])
     if heading_cross[2] == 0:
         return 'straight'
     elif heading_cross[2] > 0:
@@ -191,7 +196,7 @@ def spawnDuckies(n, map_graph):
                     duckies[duckie]['pose']['x'], duckies[duckie]['pose']['y']
                 ]
                 if np.linalg.norm(
-                        np.asarray(duckie_coord) - np.asarray(coord)) < 1:
+                        np.asarray(duckie_coord) - np.asarray(coord)) < 0.5:
                     spawnIsValid = False
         duckies['duckie-%d' % i] = {
             'pose': pose,
