@@ -1,21 +1,13 @@
-#!/usr/bin/env python
-
-import rospy
 import paths
 import duckie_dynamics
 import numpy as np
 import networkx as nx
 import duckietown_world as dw
-from std_msgs.msg import String
 
 
-class StateManagerNode(object):
+class StateManager(object):
     def __init__(self):
-        self.node_name = rospy.get_name()
-
         # Parameters
-        self.sim_frequency = 20.0  # Frequency of simulation in Hz
-        self.dt = 1.0 / self.sim_frequency
         self.n_duckies = 3  # Number of duckies
         self.max_vel = 1.0 / 3.0  # Tile / s
         self.max_acc = 2.0  # Tile / s^2
@@ -31,19 +23,7 @@ class StateManagerNode(object):
         # Paths
         self.paths = paths.generateAllPaths(self.duckies, self.map_graph.nodes)
 
-        # Subscribers
-        self.sub_paths = rospy.Subscriber(
-            '~paths', String, self.cbPaths, queue_size=1)
-
-        # Publishers
-        self.pub_state = rospy.Publisher('~state', String, queue_size=1)
-
-        # Timer
-        self.isUpdating = False
-        self.request_timer = rospy.Timer(
-            rospy.Duration.from_sec(self.dt), self.cbTimer)
-
-    def updateState(self):
+    def updateState(self, dt):
         # Update every duckie
         for duckie in self.duckies:
             # Check path
@@ -61,8 +41,8 @@ class StateManagerNode(object):
                 self.duckies, self.map_graph.nodes, self.paths[duckie],
                 self.max_vel, duckie)
             vel = self.duckies[duckie]['velocity']
-            vel_new = vel + np.sign(vel_des - vel) * self.max_acc * self.dt
-            traveled = (vel + vel_new) / 2 * self.dt
+            vel_new = vel + np.sign(vel_des - vel) * self.max_acc * dt
+            traveled = (vel + vel_new) / 2 * dt
             self.duckies[duckie]['velocity'] = vel_new
             state_new = duckie_dynamics.getNewDuckieState(
                 self.duckies[duckie], self.paths[duckie], traveled)
@@ -77,6 +57,7 @@ class StateManagerNode(object):
             self.map_graph.nodes['tile-%d-%d' %
                                  (coord[0],
                                   coord[1])]['duckies'].append(duckie)
+        print(self.duckies)
 
     def generateMapGraph(self):
         tilemap = self.map.children['tilemap']
@@ -121,35 +102,3 @@ class StateManagerNode(object):
                 graph.nodes[node]['type'] = 'curve'
             graph.nodes[node]['exits'] = exits
         return graph
-
-    def cbPaths(self, data):
-        # Check for validity
-        # Generate path for invalid
-        # Store paths in self.paths
-        pass
-
-    def cbTimer(self, event):
-        # Don't update if last timer callback hasn't finished
-        if self.isUpdating:
-            rospy.logwarn('State not finished updating. Skipping timestep.')
-            return
-
-        # Update state
-        self.isUpdating = True
-        self.updateState()
-        self.isUpdating = False
-
-        # Publish
-        print(self.duckies)
-        msg_state = String()
-        self.pub_state.publish(msg_state)
-
-    def onShutdown(self):
-        rospy.loginfo('[%s] Shutdown.' % (self.node_name))
-
-
-if __name__ == '__main__':
-    rospy.init_node('state_manager_node', anonymous=False)
-    state_manager_node = StateManagerNode()
-    rospy.on_shutdown(state_manager_node.onShutdown)
-    rospy.spin()

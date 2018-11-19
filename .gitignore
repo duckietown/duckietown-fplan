@@ -4,6 +4,8 @@ build/
 
 out/
 
+*.pyc
+
 # Dynamic reconfigure
 *cfgc
 /cfg/*.py
