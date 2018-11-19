@@ -205,4 +205,4 @@ def spawnDuckies(n, map_graph):
             'heading': direction
         }
         map_graph.nodes[spawn_node]['duckies'].append('duckie-%d' % i)
-    return duckies
+    return #
