@@ -39,9 +39,14 @@ class StateManager(object):
             # Update duckie state
             vel_des = duckie_dynamics.getDesiredVelocity(
                 self.duckies, self.map_graph.nodes, self.paths[duckie],
-                self.max_vel, duckie)
+                self.max_vel, duckie, dt)
             vel = self.duckies[duckie]['velocity']
-            vel_new = vel + np.sign(vel_des - vel) * self.max_acc * dt
+            # If accelerating, use max_acc
+            if vel_des - vel > 0:
+                vel_new = min(vel + self.max_acc * dt, vel_des)
+            # If braking, allow infinite deceleration (full braking)
+            else:
+                vel_new = vel_des
             traveled = (vel + vel_new) / 2 * dt
             self.duckies[duckie]['velocity'] = vel_new
             state_new = duckie_dynamics.getNewDuckieState(

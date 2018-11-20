@@ -89,10 +89,17 @@ def getNewDuckieState(duckie, path, distance):
     return {'pose': pose_new, 'action': action_new, 'heading': heading_new}
 
 
-def getDesiredVelocity(duckies, nodes, path, max_vel, duckie):
+def getDesiredVelocity(duckies, nodes, path, max_vel, duckie, dt):
     pose = duckies[duckie]['pose']
     tile = [round(pose['x']), round(pose['y'])]
     heading = duckies[duckie]['heading']
+    stop_pos = [
+        tile[0] + heading[0] * 0.5 - 0.2, tile[1] + heading[1] * 0.5 - 0.2
+    ]  # Stopping position on current tile
+    dist_to_stop = np.linalg.norm([
+        heading[0] * (stop_pos[0] - pose['x']),
+        heading[1] * (stop_pos[1] - pose['y'])
+    ])
 
     # Check for duckies in front
     current_tile = 'tile-%d-%d' % (tile[0], tile[1])
@@ -108,7 +115,7 @@ def getDesiredVelocity(duckies, nodes, path, max_vel, duckie):
             ]
             distance_in_front = heading[0] * diff[0] + heading[1] * diff[1]
             if np.linalg.norm(diff) < 0.5 and distance_in_front > 0:
-                return 0
+                return velToStop(distance_in_front, max_vel, dt)
 
     # Check for right of way
     on_intersection = nodes[current_tile]['type'] == 'intersection'
@@ -122,12 +129,12 @@ def getDesiredVelocity(duckies, nodes, path, max_vel, duckie):
     if action_next == 'curve_right':
         for tile_duckie in front_tile_duckies:
             if tile_duckie['heading'] == heading_next:
-                return 0
+                return velToStop(dist_to_stop, max_vel, dt)
     # Check for duckies on intersection heading to your right or straight
     right_heading = [heading[1], -heading[0]]
     for tile_duckie in front_tile_duckies:
         if tile_duckie['heading'] == heading or tile_duckie['heading'] == right_heading:
-            return 0
+            return velToStop(dist_to_stop, max_vel, dt)
     # Check for duckies on the right
     right_coord = [
         tile[0] + heading[0] + right_heading[0],
@@ -144,9 +151,14 @@ def getDesiredVelocity(duckies, nodes, path, max_vel, duckie):
             ]
             dist_from_mid = right_duckie_heading[0] * diff_from_mid[0] + right_duckie_heading[1] * diff_from_mid[1]
             if right_duckie['heading'] == right_duckie_heading and dist_from_mid > 0:
-                return 0
+                return velToStop(dist_to_stop, max_vel, dt)
 
     return max_vel
+
+
+def velToStop(distance, max_vel, dt):
+    return min(
+        max(0.02 * distance / dt + max_vel / 10, distance / dt), max_vel)
 
 
 def getNewHeading(path):
