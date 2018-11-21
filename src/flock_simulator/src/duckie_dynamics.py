@@ -114,8 +114,8 @@ def getDesiredVelocity(duckies, nodes, path, max_vel, duckie, dt):
                 duckies[tile_duckie]['pose']['y'] - pose['y']
             ]
             distance_in_front = heading[0] * diff[0] + heading[1] * diff[1]
-            if np.linalg.norm(diff) < 0.5 and distance_in_front > 0:
-                return velToStop(distance_in_front, max_vel, dt)
+            if distance_in_front > 0:
+                return velToStop(distance_in_front - 0.3, max_vel, dt)
 
     # Check for right of way
     on_intersection = nodes[current_tile]['type'] == 'intersection'
@@ -157,8 +157,9 @@ def getDesiredVelocity(duckies, nodes, path, max_vel, duckie, dt):
 
 
 def velToStop(distance, max_vel, dt):
-    return min(
-        max(0.02 * distance / dt + max_vel / 10, distance / dt), max_vel)
+    if distance < 0.02:
+        return distance / dt
+    return min(0.1 * distance / dt + max_vel / 10, max_vel)
 
 
 def getNewHeading(path):
