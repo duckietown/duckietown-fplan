@@ -215,7 +215,8 @@ def spawnDuckies(n, map_graph):
             'pose': pose,
             'velocity': 0,
             'action': 'straight',
-            'heading': direction
+            'heading': direction,
+            'on_service': False,
         }
         map_graph.nodes[spawn_node]['duckies'].append('duckie-%d' % i)
     return duckies

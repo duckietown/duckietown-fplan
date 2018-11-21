@@ -2,7 +2,9 @@
 
 import rospy
 import state_manager
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
+from geometry_msgs.msg import Pose2D
+from flock_simulator.msg import FlockState, Fleetplan
 
 
 class FlockSimulatorNode(object):
@@ -17,15 +19,27 @@ class FlockSimulatorNode(object):
 
         # Subscribers
         self.sub_paths = rospy.Subscriber(
-            '~paths', String, self.cbPaths, queue_size=1)
+            '~paths', Fleetplan, self.cbPaths, queue_size=1)
 
         # Publishers
-        self.pub_state = rospy.Publisher('~state', String, queue_size=1)
+        self.pub_state = rospy.Publisher('~state', FlockState, queue_size=1)
 
         # Timer
         self.isUpdating = False
         self.request_timer = rospy.Timer(
             rospy.Duration.from_sec(self.dt), self.cbTimer)
+
+    def generateFlockStateMsg(self, duckies):
+        msg = FlockState()
+        msg.header.stamp = rospy.Time.now()
+        for duckie in duckies:
+            msg.location.append(
+                Pose2D(duckies[duckie]['pose']['x'],
+                       duckies[duckie]['pose']['y'],
+                       duckies[duckie]['pose']['phi']))
+            msg.on_service.append(Bool(duckies[duckie]['on_service']))
+            msg.duckie_id.append(String(duckie))
+        return msg
 
     def cbPaths(self, data):
         # Check for validity
@@ -45,7 +59,7 @@ class FlockSimulatorNode(object):
         self.isUpdating = False
 
         # Publish
-        msg_state = String()
+        msg_state = self.generateFlockStateMsg(self.state_manager.duckies)
         self.pub_state.publish(msg_state)
 
     def onShutdown(self):

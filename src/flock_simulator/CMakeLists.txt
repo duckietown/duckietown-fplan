@@ -10,11 +10,10 @@ find_package(catkin REQUIRED COMPONENTS
 
  add_message_files(
    FILES
-   dynamics.msg
-   fleetplan.msg
-   path.msg
-   fleetplan.msg
-   state.msg
+   FlockState.msg
+   Fleetplan.msg
+   Path.msg
+   Dynamics.msg
  )
 
 catkin_python_setup()
