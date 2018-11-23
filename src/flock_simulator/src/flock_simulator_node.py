@@ -3,8 +3,8 @@
 import rospy
 import state_manager
 from std_msgs.msg import String, Bool
-from geometry_msgs.msg import Pose2D
-from flock_simulator.msg import FlockState, Fleetplan
+from geometry_msgs.msg import Pose2D, Twist
+from flock_simulator.msg import FlockState, FlockCommand, DuckieState
 
 
 class FlockSimulatorNode(object):
@@ -19,7 +19,7 @@ class FlockSimulatorNode(object):
 
         # Subscribers
         self.sub_paths = rospy.Subscriber(
-            '~paths', Fleetplan, self.cbPaths, queue_size=1)
+            '~commands', FlockCommand, self.cbCommands, queue_size=1)
 
         # Publishers
         self.pub_state = rospy.Publisher('~state', FlockState, queue_size=1)
@@ -29,22 +29,7 @@ class FlockSimulatorNode(object):
         self.request_timer = rospy.Timer(
             rospy.Duration.from_sec(self.dt), self.cbTimer)
 
-    def generateFlockStateMsg(self, duckies):
-        msg = FlockState()
-        msg.header.stamp = rospy.Time.now()
-        for duckie in duckies:
-            msg.location.append(
-                Pose2D(duckies[duckie]['pose']['x'],
-                       duckies[duckie]['pose']['y'],
-                       duckies[duckie]['pose']['phi']))
-            msg.on_service.append(Bool(duckies[duckie]['on_service']))
-            msg.duckie_id.append(String(duckie))
-        return msg
-
-    def cbPaths(self, data):
-        # Check for validity
-        # Generate path for invalid
-        # Store paths in self.paths
+    def cbCommands(self, data):
         pass
 
     def cbTimer(self, event):
@@ -61,6 +46,21 @@ class FlockSimulatorNode(object):
         # Publish
         msg_state = self.generateFlockStateMsg(self.state_manager.duckies)
         self.pub_state.publish(msg_state)
+
+    def generateFlockStateMsg(self, duckies):
+        msg = FlockState()
+        msg.header.stamp = rospy.Time.now()
+        for duckie in duckies:
+            duckiestate_msg = DuckieState()
+            duckiestate_msg.duckie_id = String(data=duckie)
+            duckiestate_msg.on_service = Bool(
+                data=duckies[duckie]['on_service'])
+            duckiestate_msg.pose = Pose2D(
+                x=duckies[duckie]['pose']['x'],
+                y=duckies[duckie]['pose']['y'],
+                theta=duckies[duckie]['pose']['phi'])
+            msg.duckie_states.append(duckiestate_msg)
+        return msg
 
     def onShutdown(self):
         rospy.loginfo('[%s] Shutdown.' % (self.node_name))
