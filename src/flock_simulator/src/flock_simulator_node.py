@@ -13,52 +13,50 @@ class FlockSimulatorNode(object):
 
         self.state_manager = state_manager.StateManager()
 
-        # Parameters
-        self.sim_frequency = 20.0  # Frequency of simulation in Hz
-        self.dt = 1.0 / self.sim_frequency
-
         # Subscribers
         self.sub_paths = rospy.Subscriber(
-            '~commands', FlockCommand, self.cbCommands, queue_size=1)
+            '~flock_commands', FlockCommand, self.cbCommands, queue_size=1)
 
         # Publishers
-        self.pub_state = rospy.Publisher('~state', FlockState, queue_size=1)
+        self.pub_state = rospy.Publisher(
+            '~flock_state', FlockState, queue_size=1)
 
-        # Timer
-        self.isUpdating = False
-        self.request_timer = rospy.Timer(
-            rospy.Duration.from_sec(self.dt), self.cbTimer)
-
-    def cbCommands(self, data):
-        pass
-
-    def cbTimer(self, event):
-        # Don't update if last timer callback hasn't finished
-        if self.isUpdating:
-            rospy.logwarn('State not finished updating. Skipping timestep.')
-            return
-
+    def cbCommands(self, msg):
         # Update state
-        self.isUpdating = True
-        self.state_manager.updateState(self.dt)
-        self.isUpdating = False
+        commands = self.getCommands(msg)
+        self.state_manager.updateState(commands, msg.dt)
 
         # Publish
         msg_state = self.generateFlockStateMsg(self.state_manager.duckies)
         self.pub_state.publish(msg_state)
 
+    def getCommands(self, msg):
+        commands = []
+        for command in msg.duckie_commands:
+            commands.append({
+                'duckie_id': command.duckie_id,
+                'command': {
+                    'linear': command.linear.x,
+                    'angular': command.angular.z
+                }
+            })
+        return commands
+
     def generateFlockStateMsg(self, duckies):
         msg = FlockState()
         msg.header.stamp = rospy.Time.now()
-        for duckie in duckies:
+        for duckie_id in duckies:
             duckiestate_msg = DuckieState()
-            duckiestate_msg.duckie_id = String(data=duckie)
+            duckiestate_msg.duckie_id = String(data=duckie_id)
             duckiestate_msg.on_service = Bool(
-                data=duckies[duckie]['on_service'])
+                data=duckies[duckie_id]['on_service'])
             duckiestate_msg.pose = Pose2D(
-                x=duckies[duckie]['pose']['x'],
-                y=duckies[duckie]['pose']['y'],
-                theta=duckies[duckie]['pose']['phi'])
+                x=duckies[duckie_id]['pose']['x'],
+                y=duckies[duckie_id]['pose']['y'],
+                theta=duckies[duckie_id]['pose']['theta'])
+            duckiestate_msg.velocity = Twist(
+                linear=[duckies[duckie_id]['velocity']['linear'], 0, 0],
+                angular=[0, 0, duckies[duckie_id]['velocity']['angular']])
             msg.duckie_states.append(duckiestate_msg)
         return msg
 
