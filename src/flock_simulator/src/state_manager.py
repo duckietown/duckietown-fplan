@@ -12,11 +12,11 @@ class StateManager(object):
 
         # Map
         self.map = dw.load_map('4way')
+        self.skeleton_graph = dw.get_skeleton_graph(self.map['tilemap'])
 
         # State of duckies
         self.duckies = duckie_dynamics.spawnDuckies(self.n_duckies,
-                                                    dw.get_skeleton_graph(
-                                                        self.map['tilemap']))
+                                                    self.skeleton_graph)
 
     def updateState(self, commands, dt):
         duckies_update = {}
@@ -24,9 +24,10 @@ class StateManager(object):
             duckie = self.duckies[duckie_id]
             if duckie_id in commands:
                 command = commands[duckie_id]
+                self.duckies[duckie_id]['next_point'] = None
             else:
-                command = duckie_dynamics.getRandomCommand(
-                    self.map, duckie, dt)
+                command = duckie_dynamics.getRandomCommand(duckie)
             duckies_update[duckie_id] = duckie_dynamics.updateDuckie(
-                self.duckies, duckie, command, self.map.tile_size, dt)
-        self.duckies = duckies_update
+                self.duckies, duckie, command, self.skeleton_graph,
+                self.map.tile_size, dt)
+        self.duckies.update(duckies_update)

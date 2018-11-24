@@ -47,6 +47,7 @@ class FlockPlannerNode(object):
     def generateCommands(self):
         msg = FlockCommand()
         msg.header.stamp = rospy.Time.now()
+        msg.dt.data = 1.0 / self.sim_frequency
         return msg
 
     def onShutdown(self):
