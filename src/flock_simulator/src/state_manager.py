@@ -27,6 +27,6 @@ class StateManager(object):
             else:
                 command = duckie_dynamics.getRandomCommand(
                     self.map, duckie, dt)
-            duckies_update[duckie] = duckie_dynamics.updateDuckie(
+            duckies_update[duckie_id] = duckie_dynamics.updateDuckie(
                 self.duckies, duckie, command, self.map.tile_size, dt)
         self.duckies = duckies_update

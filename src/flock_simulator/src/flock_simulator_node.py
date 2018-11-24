@@ -3,7 +3,7 @@
 import rospy
 import state_manager
 from std_msgs.msg import String, Bool
-from geometry_msgs.msg import Pose2D, Twist
+from geometry_msgs.msg import Pose2D, Twist, Vector3
 from flock_simulator.msg import FlockState, FlockCommand, DuckieState
 
 
@@ -20,15 +20,30 @@ class FlockSimulatorNode(object):
         # Publishers
         self.pub_state = rospy.Publisher(
             '~flock_state', FlockState, queue_size=1)
+        self.msg_state = FlockState()
+
+        self.isUpdating = False
 
     def cbCommands(self, msg):
+        # Return same state if last callback has not finished
+        if self.isUpdating:
+            rospy.logwarn(
+                'State not finished updating. Publishing previous state again.'
+            )
+            self.pub_state.publish(self.msg_state)
+            return
+
         # Update state
+        self.isUpdating = True
+        dt = msg.dt.data
         commands = self.getCommands(msg)
-        self.state_manager.updateState(commands, msg.dt)
+        self.state_manager.updateState(commands, dt)
+        self.isUpdating = False
 
         # Publish
-        msg_state = self.generateFlockStateMsg(self.state_manager.duckies)
-        self.pub_state.publish(msg_state)
+        self.msg_state = self.generateFlockStateMsg(self.state_manager.duckies)
+        self.pub_state.publish(self.msg_state)
+        rospy.logdebug(self.state_manager.duckies)
 
     def getCommands(self, msg):
         commands = []
@@ -51,12 +66,13 @@ class FlockSimulatorNode(object):
             duckiestate_msg.on_service = Bool(
                 data=duckies[duckie_id]['on_service'])
             duckiestate_msg.pose = Pose2D(
-                x=duckies[duckie_id]['pose']['x'],
-                y=duckies[duckie_id]['pose']['y'],
-                theta=duckies[duckie_id]['pose']['theta'])
+                x=duckies[duckie_id]['pose'].p[0],
+                y=duckies[duckie_id]['pose'].p[1],
+                theta=duckies[duckie_id]['pose'].theta)
             duckiestate_msg.velocity = Twist(
-                linear=[duckies[duckie_id]['velocity']['linear'], 0, 0],
-                angular=[0, 0, duckies[duckie_id]['velocity']['angular']])
+                linear=Vector3(duckies[duckie_id]['velocity']['linear'], 0, 0),
+                angular=Vector3(0, 0,
+                                duckies[duckie_id]['velocity']['angular']))
             msg.duckie_states.append(duckiestate_msg)
         return msg
 
@@ -65,7 +81,8 @@ class FlockSimulatorNode(object):
 
 
 if __name__ == '__main__':
-    rospy.init_node('flock_simulator_node', anonymous=False)
+    rospy.init_node(
+        'flock_simulator_node', anonymous=False, log_level=rospy.DEBUG)
     flock_simulator_node = FlockSimulatorNode()
     rospy.on_shutdown(flock_simulator_node.onShutdown)
     rospy.spin()
