@@ -15,11 +15,14 @@ class FlockSimulatorNode(object):
 
         # Subscribers
         self.sub_paths = rospy.Subscriber(
-            '~flock_commands', FlockCommand, self.cbCommands, queue_size=1)
+            '/flock_simulator/commands',
+            FlockCommand,
+            self.cbCommands,
+            queue_size=1)
 
         # Publishers
         self.pub_state = rospy.Publisher(
-            '~flock_state', FlockState, queue_size=1)
+            '/flock_simulator/state', FlockState, queue_size=1)
         self.msg_state = FlockState()
 
         self.isUpdating = False
@@ -43,7 +46,6 @@ class FlockSimulatorNode(object):
         # Publish
         self.msg_state = self.generateFlockStateMsg(self.state_manager.duckies)
         self.pub_state.publish(self.msg_state)
-        rospy.logdebug(self.state_manager.duckies)
 
     def getCommands(self, msg):
         commands = []
@@ -53,7 +55,8 @@ class FlockSimulatorNode(object):
                 'command': {
                     'linear': command.linear.x,
                     'angular': command.angular.z
-                }
+                },
+                'on_rails': command.on_rails.data
             })
         return commands
 
@@ -81,8 +84,7 @@ class FlockSimulatorNode(object):
 
 
 if __name__ == '__main__':
-    rospy.init_node(
-        'flock_simulator_node', anonymous=False, log_level=rospy.DEBUG)
+    rospy.init_node('flock_simulator_node', anonymous=False)
     flock_simulator_node = FlockSimulatorNode()
     rospy.on_shutdown(flock_simulator_node.onShutdown)
     rospy.spin()

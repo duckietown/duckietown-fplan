@@ -11,14 +11,11 @@ class FlockPlannerNode(object):
 
         # Subscribers
         self.sub_paths = rospy.Subscriber(
-            '/flock_simulator_node/flock_state',
-            FlockState,
-            self.cbState,
-            queue_size=1)
+            '/flock_simulator/state', FlockState, self.cbState, queue_size=1)
 
         # Publishers
         self.pub_commands = rospy.Publisher(
-            '/flock_simulator_node/flock_commands', FlockCommand, queue_size=1)
+            '/flock_simulator/commands', FlockCommand, queue_size=1)
 
         # Timer
         self.sim_frequency = 20.0  # Frequency of simulation in Hz
