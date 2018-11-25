@@ -14,13 +14,6 @@ def getRandomCommand(duckies, duckie, stop_distance, max_vel, tile_size, dt):
 
     linear = max_vel
 
-    for visible_duckie in duckie['in_fov']:
-        dist = distance(duckie['pose'],
-                        duckies[visible_duckie]['pose']) * tile_size
-        if dist < 2.0 * stop_distance:
-            stop_vel = max((dist / stop_distance - 1.0) * max_vel, 0.0)
-            linear = min(linear, stop_vel)
-
     d_angle = linear / 0.28 * dt
 
     if ang_diff > d_angle / 2:
@@ -31,6 +24,12 @@ def getRandomCommand(duckies, duckie, stop_distance, max_vel, tile_size, dt):
         angular = -linear / radius
     else:
         angular = 0.0
+        for visible_duckie in duckie['in_fov']:
+            dist = distance(duckie['pose'],
+                            duckies[visible_duckie]['pose']) * tile_size
+            if dist < 2.0 * stop_distance:
+                stop_vel = max((dist / stop_distance - 1.0) * max_vel, 0.0)
+                linear = min(linear, stop_vel)
 
     return {'linear': linear, 'angular': angular, 'on_rails': True}
 
