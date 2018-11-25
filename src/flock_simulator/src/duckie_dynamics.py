@@ -1,208 +1,212 @@
 import random
 import numpy as np
+import duckietown_world as dw
 
 
-def calculatePose(pose, distance, tile, action, heading):
-    if action == 'straight':
-        pose_new = {
-            'x': pose['x'] + heading[0] * distance,
-            'y': pose['y'] + heading[1] * distance,
-            'phi': pose['phi']
+def getRandomCommand(duckie, dt):
+    # If no next_point, stand still
+    if not duckie['next_point']:
+        return {'linear': 0, 'angular': 0, 'on_rails': False}
+
+    duckie_pose = duckie['pose']
+    point_pose = duckie['next_point']['pose']
+    ang_diff = limitAngle(point_pose.theta - duckie_pose.theta)
+
+    linear = 0.5
+    d_angle = linear / 0.28 * dt
+
+    if ang_diff > d_angle / 2:
+        radius = 0.72
+        angular = linear / radius
+    elif ang_diff < -d_angle / 2:
+        radius = 0.28
+        angular = -linear / radius
+    else:
+        angular = 0.0
+
+    return {'linear': linear, 'angular': angular, 'on_rails': True}
+
+
+def getNextPoint(skeleton_graph, current_pose, current_point):
+    lane_control_points = skeleton_graph.root2.children[current_point[
+        'lane']].control_points
+    current_point_pose = current_point['pose']
+
+    # If current_point in front, keep it as next_point
+    if abs(
+            subtractAngle(
+                np.arctan2(current_point_pose.p[1] - current_pose.p[1],
+                           current_point_pose.p[0] - current_pose.p[0]),
+                current_pose.theta)) < np.pi / 2:
+        return current_point
+
+    # If current lane has more control points, set next one as next_point
+    if len(lane_control_points) > current_point['point_index'] + 1:
+        return {
+            'lane': current_point['lane'],
+            'point_index': current_point['point_index'] + 1,
+            'pose': lane_control_points[current_point['point_index'] + 1]
         }
-    elif action == 'curve_left':
-        phi_new = pose['phi'] + distance / 0.75
-        phi_new = (phi_new + np.pi) % (2 * np.pi) - np.pi
-        center = {
-            '[0, 1]': [tile[0] - 0.5, tile[1] + 0.5],
-            '[1, 0]': [tile[0] + 0.5, tile[1] + 0.5],
-            '[0, -1]': [tile[0] + 0.5, tile[1] - 0.5],
-            '[-1, 0]': [tile[0] - 0.5, tile[1] - 0.5]
-        }
-        pose_new = {
-            'x':
-            center[str([int(x) for x in heading])][0] + 0.75 * np.cos(phi_new),
-            'y':
-            center[str([int(x) for x in heading])][1] + 0.75 * np.sin(phi_new),
-            'phi':
-            phi_new
-        }
-    elif action == 'curve_right':
-        phi_new = pose['phi'] - distance / 0.25
-        phi_new = (phi_new + np.pi) % (2 * np.pi) - np.pi
-        center = {
-            '[0, 1]': [tile[0] + 0.5, tile[1] + 0.5],
-            '[1, 0]': [tile[0] + 0.5, tile[1] - 0.5],
-            '[0, -1]': [tile[0] - 0.5, tile[1] - 0.5],
-            '[-1, 0]': [tile[0] - 0.5, tile[1] + 0.5]
-        }
-        pose_new = {
-            'x':
-            center[str([int(x) for x in heading])][0] + 0.25 * np.cos(phi_new),
-            'y':
-            center[str([int(x) for x in heading])][1] + 0.25 * np.sin(phi_new),
-            'phi':
-            phi_new
-        }
+
+    # Find random next lane
+    edges = list(skeleton_graph.G.edges(data=True))
+    edge_data = [
+        edge for edge in edges if edge[2]['lane'] == current_point['lane']
+    ]
+    node = edge_data[0][1]
+    node_next = random.choice(list(skeleton_graph.G.neighbors(node)))
+    lane_next = skeleton_graph.G.get_edge_data(node, node_next)[0]['lane']
+    pose_next = skeleton_graph.root2.children[lane_next].control_points[0]
+
+    return {'lane': lane_next, 'point_index': 0, 'pose': pose_next}
+
+
+def updateDuckie(duckies, duckie, command, skeleton_graph, tile_size, dt):
+    pose_new = commandToPose(duckie['pose'], command, tile_size, dt)
+    velocity_new = command
+    next_point_new = getNextPoint(
+        skeleton_graph, pose_new,
+        duckie['next_point']) if duckie['next_point'] else None
+    return {
+        'pose': pose_new,
+        'velocity': velocity_new,
+        'next_point': next_point_new,
+        'on_service': False
+    }
+
+
+def spawnDuckies(n, skeleton_graph):
+    duckies = {}
+    occupied_lanes = []
+    for i in range(n):
+        spawn_is_occupied = True
+        while spawn_is_occupied:
+            lane = random.sample(skeleton_graph.root2.children, 1)[0]
+            if lane not in occupied_lanes:
+                point_index = random.choice(
+                    range(
+                        len(skeleton_graph.root2.children[lane]
+                            .control_points)))
+                pose = skeleton_graph.root2.children[lane].control_points[
+                    point_index]
+                next_point = getNextPoint(skeleton_graph, pose, {
+                    'lane': lane,
+                    'point_index': point_index,
+                    'pose': pose
+                })
+                duckies['duckie-%d' % i] = {
+                    'pose': pose,
+                    'velocity': {
+                        'linear': 0,
+                        'angular': 0
+                    },
+                    'next_point': next_point,
+                    'on_service': False
+                }
+                spawn_is_occupied = False
+                occupied_lanes.append(lane)
+    return duckies
+
+
+def commandToPose(pose, command, tile_size, dt):
+    v = command['linear'] / tile_size
+    omega = command['angular']
+
+    theta_new = limitAngle(pose.theta + omega * dt)
+
+    theta_avg = pose.theta + subtractAngle(theta_new, pose.theta) / 2
+
+    position_new = [
+        pose.p[0] + v * np.cos(theta_avg) * dt,
+        pose.p[1] + v * np.sin(theta_avg) * dt
+    ]
+
+    pose_new = dw.SE2Transform(position_new, theta_new)
+
+    # If duckiebot on rails, put on rails
+    if command['on_rails']:
+        pose_new = putOnRails(pose_new, command, dt)
+
     return pose_new
 
 
-def getNewDuckieState(duckie, path, distance):
-    pose = duckie['pose']
-    action = duckie['action']
-    heading = duckie['heading']
-    tile = [round(pose['x']), round(pose['y'])]
-    pose_new = calculatePose(pose, distance, tile, action, heading)
-    tile_new = [round(pose_new['x']), round(pose_new['y'])]
+def putOnRails(pose, command, dt):
+    omega = command['angular']
+    linear = command['linear']
+    d_angle = linear / 0.28 * dt
 
-    if tile_new == tile:
-        return {'pose': pose_new, 'action': action, 'heading': heading}
-
-    heading_new = getNewHeading(path)
-    action_new = getNewAction(heading, heading_new)
-
-    phi_trans = {
-        '[0, 1]': 0,
-        '[1, 0]': -1.0 / 2.0 * np.pi,
-        '[0, -1]': np.pi,
-        '[-1, 0]': 1.0 / 2.0 * np.pi
-    }
-
-    pose_trans = {
-        'x': tile[0] + heading[0] * 0.5,
-        'y': tile[1] + heading[1] * 0.5,
-        'phi': phi_trans[str([int(x) for x in heading])]
-    }
-
-    if action == 'straight':
-        distance_over = (pose_new['x'] - pose_trans['x']) + (
-            pose_new['y'] - pose_trans['y'])
-    elif action == 'curve_left':
-        distance_over = np.abs(
-            pose_new['phi'] - phi_trans[str([int(x) for x in heading])]) * 0.75
-    else:
-        distance_over = np.abs(
-            pose_new['phi'] - phi_trans[str([int(x) for x in heading])]) * 0.25
-
-    pose_new = calculatePose(pose_trans, distance - distance_over, tile_new,
-                             action_new, heading_new)
-
-    return {'pose': pose_new, 'action': action_new, 'heading': heading_new}
-
-
-def getDesiredVelocity(duckies, nodes, path, max_vel, duckie):
-    pose = duckies[duckie]['pose']
-    tile = [round(pose['x']), round(pose['y'])]
-    heading = duckies[duckie]['heading']
-
-    # Check for duckies in front
-    current_tile = 'tile-%d-%d' % (tile[0], tile[1])
-    front_tile = 'tile-%d-%d' % (tile[0] + heading[0], tile[1] + heading[1])
-    current_tile_duckies = nodes[current_tile]['duckies']
-    front_tile_duckies = nodes[front_tile]['duckies']
-    both_tiles_duckies = current_tile_duckies + front_tile_duckies
-    if both_tiles_duckies:
-        for tile_duckie in both_tiles_duckies:
-            diff = [
-                duckies[tile_duckie]['pose']['x'] - pose['x'],
-                duckies[tile_duckie]['pose']['y'] - pose['y']
+    if omega == 0:
+        if abs(pose.theta) < d_angle / 2:
+            theta = 0.0
+            position = [pose.p[0], np.floor(pose.p[1]) + 0.28]
+        elif abs(limitAngle(pose.theta - np.pi)) < d_angle / 2:
+            theta = -np.pi
+            position = [pose.p[0], np.floor(pose.p[1]) + 0.72]
+        elif abs(pose.theta - np.pi / 2) < d_angle / 2:
+            theta = np.pi / 2
+            position = [np.floor(pose.p[0]) + 0.72, pose.p[1]]
+        elif abs(pose.theta + np.pi / 2) < d_angle / 2:
+            theta = -np.pi / 2
+            position = [np.floor(pose.p[0]) + 0.28, pose.p[1]]
+        else:
+            theta = pose.theta
+            position = pose.p
+    elif omega > 0:
+        radius = 0.72
+        theta = pose.theta
+        if pose.theta >= 0 and pose.theta < np.pi / 2:
+            position = [
+                np.floor(pose.p[0]) + np.sin(theta) * radius,
+                np.ceil(pose.p[1]) - np.cos(theta) * radius
             ]
-            distance_in_front = heading[0] * diff[0] + heading[1] * diff[1]
-            if np.linalg.norm(diff) < 0.5 and distance_in_front > 0:
-                return 0
-
-    # Check for right of way
-    on_intersection = nodes[current_tile]['type'] == 'intersection'
-    next_tile_intersection = len(nodes[front_tile]['type']) == 'intersection'
-    if on_intersection or not next_tile_intersection or not front_tile_duckies:
-        return max_vel
-
-    heading_next = getNewHeading(path)
-    action_next = getNewAction(heading, heading_next)
-    # For right curves, only check for duckies on intersection heading same direction
-    if action_next == 'curve_right':
-        for tile_duckie in front_tile_duckies:
-            if tile_duckie['heading'] == heading_next:
-                return 0
-    # Check for duckies on intersection heading to your right or straight
-    right_heading = [heading[1], -heading[0]]
-    for tile_duckie in front_tile_duckies:
-        if tile_duckie['heading'] == heading or tile_duckie['heading'] == right_heading:
-            return 0
-    # Check for duckies on the right
-    right_coord = [
-        tile[0] + heading[0] + right_heading[0],
-        tile[1] + heading[1] + right_heading[1]
-    ]
-    right_tile = 'tile-%d-%d' % (right_coord[0], right_coord[1])
-    right_tile_duckies = nodes[right_tile]['duckies']
-    if right_tile_duckies:
-        right_duckie_heading = [-right_heading[0], -right_heading[1]]
-        for right_duckie in right_tile_duckies:
-            diff_from_mid = [
-                right_duckie['pose']['x'] - right_coord[0],
-                right_duckie['pose']['y'] - right_coord[1]
+        elif pose.theta >= np.pi / 2 and pose.theta < np.pi:
+            position = [
+                np.floor(pose.p[0]) + np.sin(theta) * radius,
+                np.floor(pose.p[1]) - np.cos(theta) * radius
             ]
-            dist_from_mid = right_duckie_heading[0] * diff_from_mid[0] + right_duckie_heading[1] * diff_from_mid[1]
-            if right_duckie['heading'] == right_duckie_heading and dist_from_mid > 0:
-                return 0
+        elif pose.theta >= -np.pi and pose.theta < -np.pi / 2:
+            position = [
+                np.ceil(pose.p[0]) + np.sin(theta) * radius,
+                np.floor(pose.p[1]) - np.cos(theta) * radius
+            ]
+        elif pose.theta >= -np.pi / 2 and pose.theta < 0:
+            position = [
+                np.ceil(pose.p[0]) + np.sin(theta) * radius,
+                np.ceil(pose.p[1]) - np.cos(theta) * radius
+            ]
+    elif omega < 0:
+        radius = 0.28
+        theta = pose.theta
+        if pose.theta >= 0 and pose.theta < np.pi / 2:
+            position = [
+                np.ceil(pose.p[0]) - np.sin(theta) * radius,
+                np.floor(pose.p[1]) + np.cos(theta) * radius
+            ]
+        elif pose.theta >= np.pi / 2 and pose.theta < np.pi:
+            position = [
+                np.ceil(pose.p[0]) - np.sin(theta) * radius,
+                np.ceil(pose.p[1]) + np.cos(theta) * radius
+            ]
+        elif pose.theta >= -np.pi and pose.theta < -np.pi / 2:
+            position = [
+                np.floor(pose.p[0]) - np.sin(theta) * radius,
+                np.ceil(pose.p[1]) + np.cos(theta) * radius
+            ]
+        elif pose.theta >= -np.pi / 2 and pose.theta < 0:
+            position = [
+                np.floor(pose.p[0]) - np.sin(theta) * radius,
+                np.floor(pose.p[1]) + np.cos(theta) * radius
+            ]
 
-    return max_vel
+    return dw.SE2Transform(position, theta)
 
 
-def getNewHeading(path):
-    return [b - a for a, b in zip(path[0], path[1])]
+def limitAngle(angle):
+    return (angle + np.pi) % (2 * np.pi) - np.pi
 
 
-def getNewAction(heading, heading_new):
-    heading_cross = np.cross(heading + [0], heading_new + [0])
-    if heading_cross[2] == 0:
-        return 'straight'
-    elif heading_cross[2] > 0:
-        return 'curve_left'
-    else:
-        return 'curve_right'
-
-
-def spawnDuckies(n, map_graph):
-    duckies = {}
-    offset = {
-        '[0, 1]': [0.25, 0, 0],
-        '[1, 0]': [0, -0.25, -1.0 / 2.0 * np.pi],
-        '[0, -1]': [-0.25, 0, np.pi],
-        '[-1, 0]': [0, 0.25, 1.0 / 2.0 * np.pi]
-    }
-    for i in range(n):
-        spawnIsValid = False
-        while not spawnIsValid:
-            spawn_node = random.choice([
-                node for node, data in map_graph.nodes(data=True)
-                if data['type'] == 'straight'
-            ])
-            direction = random.choice(map_graph.nodes[spawn_node]['exits'])
-            pose = {
-                'x':
-                map_graph.nodes[spawn_node]['coord'][0] +
-                offset[str(direction)][0],
-                'y':
-                map_graph.nodes[spawn_node]['coord'][1] +
-                offset[str(direction)][1],
-                'phi':
-                offset[str(direction)][2]
-            }
-            coord = [pose['x'], pose['y']]
-            spawnIsValid = True
-            for duckie in duckies:
-                duckie_coord = [
-                    duckies[duckie]['pose']['x'], duckies[duckie]['pose']['y']
-                ]
-                if np.linalg.norm(
-                        np.asarray(duckie_coord) - np.asarray(coord)) < 0.5:
-                    spawnIsValid = False
-        duckies['duckie-%d' % i] = {
-            'pose': pose,
-            'velocity': 0,
-            'action': 'straight',
-            'heading': direction
-        }
-        map_graph.nodes[spawn_node]['duckies'].append('duckie-%d' % i)
-    return duckies
+def subtractAngle(angle1, angle2):
+    diff = angle1 - angle2
+    if abs(diff) > np.pi:
+        return limitAngle(2 * np.pi - diff)
+    return diff
