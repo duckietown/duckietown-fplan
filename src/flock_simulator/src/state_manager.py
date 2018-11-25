@@ -1,4 +1,3 @@
-import paths
 import duckie_dynamics
 import numpy as np
 import networkx as nx
@@ -9,6 +8,8 @@ class StateManager(object):
     def __init__(self):
         # Parameters
         self.n_duckies = 3  # Number of duckies
+        self.fov = [2.0 / 3.0 * np.pi,
+                    2.0]  # Field of view (angle, distance in tiles)
 
         # Map
         self.map = dw.load_map('4way')
@@ -22,16 +23,38 @@ class StateManager(object):
         duckies_update = {}
         for duckie_id in self.duckies:
             duckie = self.duckies[duckie_id]
+
+            # Use commands if received, otherwise drive around randomly
             if duckie_id in commands:
                 command = commands[duckie_id]
                 self.duckies[duckie_id]['next_point'] = None
             else:
                 command = duckie_dynamics.getRandomCommand(duckie, dt)
+
+            # Update duckie's state
             duckies_update[duckie_id] = duckie_dynamics.updateDuckie(
                 self.duckies, duckie, command, self.skeleton_graph,
                 self.map.tile_size, dt)
+
+            # Print duckie's pose
             print('%s: [%f, %f], %f' %
-                  (duckie_id, self.duckies[duckie_id]['pose'].p[0],
-                   self.duckies[duckie_id]['pose'].p[1],
-                   self.duckies[duckie_id]['pose'].theta))
+                  (duckie_id, duckies_update[duckie_id]['pose'].p[0],
+                   duckies_update[duckie_id]['pose'].p[1],
+                   duckies_update[duckie_id]['pose'].theta))
+
+        # Update what every duckiebot sees
+        for duckie_id in self.duckies:
+            in_fov = []
+            duckie_pose = self.duckies[duckie_id]['pose']
+            for other_duckie in self.duckies:
+                if duckie_id == other_duckie:
+                    continue
+                other_pose = self.duckies[other_duckie]['pose']
+                if duckie_dynamics.distance(
+                        duckie_pose, other_pose
+                ) < self.fov[1] and duckie_dynamics.isInFront(
+                        duckie_pose, other_pose, self.fov[0]):
+                    in_fov.append(other_duckie)
+            duckies_update[duckie_id]['in_fov'] = in_fov
+
         self.duckies.update(duckies_update)

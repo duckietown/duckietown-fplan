@@ -76,6 +76,10 @@ class FlockSimulatorNode(object):
                 linear=Vector3(duckies[duckie_id]['velocity']['linear'], 0, 0),
                 angular=Vector3(0, 0,
                                 duckies[duckie_id]['velocity']['angular']))
+            duckiestate_msg.in_fov = [
+                String(data=visible_duckie)
+                for visible_duckie in duckies[duckie_id]['in_fov']
+            ]
             msg.duckie_states.append(duckiestate_msg)
         return msg
 

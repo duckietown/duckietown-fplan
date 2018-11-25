@@ -33,11 +33,7 @@ def getNextPoint(skeleton_graph, current_pose, current_point):
     current_point_pose = current_point['pose']
 
     # If current_point in front, keep it as next_point
-    if abs(
-            subtractAngle(
-                np.arctan2(current_point_pose.p[1] - current_pose.p[1],
-                           current_point_pose.p[0] - current_pose.p[0]),
-                current_pose.theta)) < np.pi / 2:
+    if isInFront(current_pose, current_point_pose, np.pi):
         return current_point
 
     # If current lane has more control points, set next one as next_point
@@ -101,7 +97,8 @@ def spawnDuckies(n, skeleton_graph):
                         'angular': 0
                     },
                     'next_point': next_point,
-                    'on_service': False
+                    'on_service': False,
+                    'in_fov': []
                 }
                 spawn_is_occupied = False
                 occupied_lanes.append(lane)
@@ -131,6 +128,11 @@ def commandToPose(pose, command, tile_size, dt):
 
 
 def putOnRails(pose, command, dt):
+    # Fixes deviations from the ideal path.
+    # Assumes duckiebot is turning when angular velocity != 0 and places
+    # duckiebot on curve depending on current orientation, which might
+    # lead to "teleportation".
+
     omega = command['angular']
     linear = command['linear']
     d_angle = linear / 0.28 * dt
@@ -201,11 +203,28 @@ def putOnRails(pose, command, dt):
     return dw.SE2Transform(position, theta)
 
 
+def isInFront(pose1, pose2, angle):
+    # frame1: Own pose
+    # frame2: Object's pose
+    # angle: Angle of cone that defines "front" ("field of view")
+    return abs(
+        subtractAngle(
+            np.arctan2(pose2.p[1] - pose1.p[1], pose2.p[0] - pose1.p[0]),
+            pose1.theta)) < angle / 2
+
+
+def distance(pose1, pose2):
+    # Distance from poses
+    return np.hypot(pose1.p[0] - pose1.p[0], pose2.p[1] - pose2.p[1])
+
+
 def limitAngle(angle):
+    # Keep angle between -pi and pi
     return (angle + np.pi) % (2 * np.pi) - np.pi
 
 
 def subtractAngle(angle1, angle2):
+    # Select the difference that is less than pi
     diff = angle1 - angle2
     if abs(diff) > np.pi:
         return limitAngle(2 * np.pi - diff)
