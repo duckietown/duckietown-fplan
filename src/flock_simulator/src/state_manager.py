@@ -10,6 +10,8 @@ class StateManager(object):
         self.n_duckies = 3  # Number of duckies
         self.fov = [2.0 / 3.0 * np.pi,
                     2.0]  # Field of view (angle, distance in tiles)
+        self.max_vel = 0.5  # Max. velocity in m/s
+        self.stop_distance = 0.2  # Distance between duckies in m
 
         # Map
         self.map = dw.load_map('4way')
@@ -29,7 +31,9 @@ class StateManager(object):
                 command = commands[duckie_id]
                 self.duckies[duckie_id]['next_point'] = None
             else:
-                command = duckie_dynamics.getRandomCommand(duckie, dt)
+                command = duckie_dynamics.getRandomCommand(
+                    self.duckies, duckie, self.stop_distance, self.max_vel,
+                    self.map.tile_size, dt)
 
             # Update duckie's state
             duckies_update[duckie_id] = duckie_dynamics.updateDuckie(
