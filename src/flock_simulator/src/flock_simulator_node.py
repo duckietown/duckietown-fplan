@@ -3,8 +3,8 @@
 import rospy
 import state_manager
 from std_msgs.msg import String, Bool
-from geometry_msgs.msg import Pose2D
-from flock_simulator.msg import FlockState, Fleetplan
+from geometry_msgs.msg import Pose2D, Twist, Vector3
+from flock_simulator.msg import FlockState, FlockCommand, DuckieState
 
 
 class FlockSimulatorNode(object):
@@ -13,54 +13,71 @@ class FlockSimulatorNode(object):
 
         self.state_manager = state_manager.StateManager()
 
-        # Parameters
-        self.sim_frequency = 20.0  # Frequency of simulation in Hz
-        self.dt = 1.0 / self.sim_frequency
-
         # Subscribers
         self.sub_paths = rospy.Subscriber(
-            '~paths', Fleetplan, self.cbPaths, queue_size=1)
+            '/flock_simulator/commands',
+            FlockCommand,
+            self.cbCommands,
+            queue_size=1)
 
         # Publishers
-        self.pub_state = rospy.Publisher('~state', FlockState, queue_size=1)
+        self.pub_state = rospy.Publisher(
+            '/flock_simulator/state', FlockState, queue_size=1)
+        self.msg_state = FlockState()
 
-        # Timer
         self.isUpdating = False
-        self.request_timer = rospy.Timer(
-            rospy.Duration.from_sec(self.dt), self.cbTimer)
 
-    def generateFlockStateMsg(self, duckies):
-        msg = FlockState()
-        msg.header.stamp = rospy.Time.now()
-        for duckie in duckies:
-            msg.location.append(
-                Pose2D(duckies[duckie]['pose']['x'],
-                       duckies[duckie]['pose']['y'],
-                       duckies[duckie]['pose']['phi']))
-            msg.on_service.append(Bool(duckies[duckie]['on_service']))
-            msg.duckie_id.append(String(duckie))
-        return msg
-
-    def cbPaths(self, data):
-        # Check for validity
-        # Generate path for invalid
-        # Store paths in self.paths
-        pass
-
-    def cbTimer(self, event):
-        # Don't update if last timer callback hasn't finished
+    def cbCommands(self, msg):
+        # Return same state if last callback has not finished
         if self.isUpdating:
-            rospy.logwarn('State not finished updating. Skipping timestep.')
+            rospy.logwarn(
+                'State not finished updating. Publishing previous state again.'
+            )
+            self.pub_state.publish(self.msg_state)
             return
 
         # Update state
         self.isUpdating = True
-        self.state_manager.updateState(self.dt)
+        dt = msg.dt.data
+        commands = self.getCommands(msg)
+        self.state_manager.updateState(commands, dt)
         self.isUpdating = False
 
         # Publish
-        msg_state = self.generateFlockStateMsg(self.state_manager.duckies)
-        self.pub_state.publish(msg_state)
+        self.msg_state = self.generateFlockStateMsg(self.state_manager.duckies)
+        self.pub_state.publish(self.msg_state)
+
+    def getCommands(self, msg):
+        commands = []
+        for command in msg.duckie_commands:
+            commands.append({
+                'duckie_id': command.duckie_id,
+                'command': {
+                    'linear': command.linear.x,
+                    'angular': command.angular.z
+                },
+                'on_rails': command.on_rails.data
+            })
+        return commands
+
+    def generateFlockStateMsg(self, duckies):
+        msg = FlockState()
+        msg.header.stamp = rospy.Time.now()
+        for duckie_id in duckies:
+            duckiestate_msg = DuckieState()
+            duckiestate_msg.duckie_id = String(data=duckie_id)
+            duckiestate_msg.on_service = Bool(
+                data=duckies[duckie_id]['on_service'])
+            duckiestate_msg.pose = Pose2D(
+                x=duckies[duckie_id]['pose'].p[0],
+                y=duckies[duckie_id]['pose'].p[1],
+                theta=duckies[duckie_id]['pose'].theta)
+            duckiestate_msg.velocity = Twist(
+                linear=Vector3(duckies[duckie_id]['velocity']['linear'], 0, 0),
+                angular=Vector3(0, 0,
+                                duckies[duckie_id]['velocity']['angular']))
+            msg.duckie_states.append(duckiestate_msg)
+        return msg
 
     def onShutdown(self):
         rospy.loginfo('[%s] Shutdown.' % (self.node_name))
