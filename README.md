@@ -5,7 +5,7 @@ Fleet planning simulator developed as a AMOD course project 2018
 ```
 rosrun flock_simulator flock_simulator_node.py
 ```
-Receives commands on the topic `/flock_simulator/commands` and updates the state accordingly which is then published on `/flock_simulator/commands`.
+Receives commands on the topic `/flock_simulator/state` and updates the state accordingly which is then published on `/flock_simulator/commands`.
 
 The duckies execute the commands (linear and angular velocity) that are tagged with their ID. If a duckie does not receive any commands, it drives around randomly (on rails). Once a duckie has received commands, it stops driving around and stops when there are no more commands. To force the "on rails" behavior, set the `on_rails` flag in the commands to `True` (unexpected behavior when steering "out of rails", to be fixed).
 
