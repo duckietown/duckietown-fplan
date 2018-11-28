@@ -69,11 +69,14 @@ class StateManager(object):
                 other_pose = self.duckies[other_duckie]['pose']
                 self_pose = self.duckies[duckie_id]['pose']
                 distance = duckie_dynamics.distance(other_pose,self_pose)
+                lane_distance = duckie_dynamics.lane_distance(self.duckies, duckie_id, self.skeleton_graph)
                 if distance<self.duckiebot_length:
                     c_level=1
+                elif lane_distance:
+                    c_level=2
                 else:
                     c_level=0
             duckies_update[duckie_id]['collision_level']=c_level
-            #print(self.duckies[duckie_id]['collision_level'])
+            print(self.duckies[duckie_id]['collision_level'])
 
         self.duckies.update(duckies_update)
