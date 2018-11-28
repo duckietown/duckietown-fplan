@@ -105,7 +105,8 @@ def spawnDuckies(n, skeleton_graph):
                     },
                     'next_point': next_point,
                     'on_service': False,
-                    'in_fov': []
+                    'in_fov': [],
+                    'collision_level': 0
                 }
                 spawn_is_occupied = False
                 occupied_lanes.append(lane)
