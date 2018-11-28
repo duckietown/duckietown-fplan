@@ -2,7 +2,7 @@
 
 import rospy
 import state_manager
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Bool, Int8
 from geometry_msgs.msg import Pose2D, Twist, Vector3
 from flock_simulator.msg import FlockState, FlockCommand, DuckieState
 
@@ -76,10 +76,12 @@ class FlockSimulatorNode(object):
                 linear=Vector3(duckies[duckie_id]['velocity']['linear'], 0, 0),
                 angular=Vector3(0, 0,
                                 duckies[duckie_id]['velocity']['angular']))
+
             duckiestate_msg.in_fov = [
                 String(data=visible_duckie)
                 for visible_duckie in duckies[duckie_id]['in_fov']
             ]
+            duckiestate_msg.collision_level = Int8(data = duckies[duckie_id]['collision_level'])
             msg.duckie_states.append(duckiestate_msg)
         return msg
 
