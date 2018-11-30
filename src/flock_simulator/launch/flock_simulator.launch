@@ -4,4 +4,7 @@
 
     <node pkg="flock_planner" name="flock_planner_node" 
         type="flock_planner_node.py" output="screen" /> 
+
+    <include file="$(find visualization_example)/launch/example.launch" />
+
 </launch>
