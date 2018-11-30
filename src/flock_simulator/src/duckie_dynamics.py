@@ -227,25 +227,29 @@ def distance(pose1, pose2):
     # Distance from poses
     return np.hypot(pose1.p[0] - pose2.p[0], pose1.p[1] - pose2.p[1])
 
-def lane_distance(duckies,duckie_id,skeleton_graph):
+
+def lane_distance(duckies, duckie_id, skeleton_graph):
     #find the nearest control point and send the relative distance along x axis
     duckie = duckies[duckie_id]
-    lane_control_points = skeleton_graph.root2.children[duckie['next_point']['lane']].control_points
-    lane_width = skeleton_graph.root2.children[duckie['next_point']['lane']].width
-    min_dist = 10000;
+    lane_control_points = skeleton_graph.root2.children[duckie['next_point'][
+        'lane']].control_points
+    lane_width = skeleton_graph.root2.children[duckie['next_point'][
+        'lane']].width
+    min_dist = 10000
     #print(duckie)
     for cp in lane_control_points:
         #print("\nThis is control point pose \n ")
         #print(cp)
         #print("\nThis is pose\n")
         #print(duckie['pose'])
-        dist=cp.p[0]-duckie['pose'].p[0]
-        if dist<min_dist:
+        dist = cp.p[0] - duckie['pose'].p[0]
+        if dist < min_dist:
             min_dist = dist
         #q2_from_q1 = geo.SE2.multiply( geo.SE2.inverse(duckie['pose']),cp )
         #print(q2_from_q1)
     #print(min_dist)
-    return min_dist>lane_width/2
+    return min_dist > lane_width / 2
+
 
 def limitAngle(angle):
     # Keep angle between -pi and pi

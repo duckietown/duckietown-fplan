@@ -12,7 +12,7 @@ class StateManager(object):
                     2.0]  # Field of view (angle, distance in tiles)
         self.max_vel = 0.5  # Max. velocity in m/s
         self.stop_distance = 0.2  # Distance between duckies in m
-        self.duckiebot_length = 0.2 # Length of duckiebot in m
+        self.duckiebot_length = 0.2  # Length of duckiebot in m
 
         # Map
         self.map = dw.load_map('4way')
@@ -61,22 +61,23 @@ class StateManager(object):
                         duckie_pose, other_pose, self.fov[0]):
                     in_fov.append(other_duckie)
             duckies_update[duckie_id]['in_fov'] = in_fov
-        # collision_level detection in duckie town
+
+        # collision_level detection in duckietown
         for duckie_id in self.duckies:
             for other_duckie in self.duckies:
                 if duckie_id == other_duckie:
                     continue
                 other_pose = self.duckies[other_duckie]['pose']
                 self_pose = self.duckies[duckie_id]['pose']
-                distance = duckie_dynamics.distance(other_pose,self_pose)
-                lane_distance = duckie_dynamics.lane_distance(self.duckies, duckie_id, self.skeleton_graph)
-                if distance<self.duckiebot_length:
-                    c_level=1
+                distance = duckie_dynamics.distance(other_pose, self_pose)
+                lane_distance = duckie_dynamics.lane_distance(
+                    self.duckies, duckie_id, self.skeleton_graph)
+                if distance < self.duckiebot_length:
+                    c_level = 1
                 elif lane_distance:
-                    c_level=2
+                    c_level = 2
                 else:
-                    c_level=0
-            duckies_update[duckie_id]['collision_level']=c_level
-            print(self.duckies[duckie_id]['collision_level'])
+                    c_level = 0
+            duckies_update[duckie_id]['collision_level'] = c_level
 
         self.duckies.update(duckies_update)

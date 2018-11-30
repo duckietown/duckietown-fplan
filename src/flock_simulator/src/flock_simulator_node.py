@@ -69,8 +69,10 @@ class FlockSimulatorNode(object):
             duckiestate_msg.on_service = Bool(
                 data=duckies[duckie_id]['on_service'])
             duckiestate_msg.pose = Pose2D(
-                x=duckies[duckie_id]['pose'].p[0],
-                y=duckies[duckie_id]['pose'].p[1],
+                x=duckies[duckie_id]['pose'].p[0] *
+                self.state_manager.map.tile_size,
+                y=duckies[duckie_id]['pose'].p[1] *
+                self.state_manager.map.tile_size,
                 theta=duckies[duckie_id]['pose'].theta)
             duckiestate_msg.velocity = Twist(
                 linear=Vector3(duckies[duckie_id]['velocity']['linear'], 0, 0),
@@ -81,7 +83,8 @@ class FlockSimulatorNode(object):
                 String(data=visible_duckie)
                 for visible_duckie in duckies[duckie_id]['in_fov']
             ]
-            duckiestate_msg.collision_level = Int8(data = duckies[duckie_id]['collision_level'])
+            duckiestate_msg.collision_level = Int8(
+                data=duckies[duckie_id]['collision_level'])
             msg.duckie_states.append(duckiestate_msg)
         return msg
 
