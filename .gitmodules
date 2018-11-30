@@ -1,0 +1,3 @@
+[submodule "src/duckietown-visualization"]
+	path = src/duckietown-visualization
+	url = https://github.com/surirohit/duckietown-visualization
