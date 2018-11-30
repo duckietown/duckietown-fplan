@@ -1,0 +1,18 @@
+<launch>
+    <arg name="map_name" default="robotarium1"/>
+
+    <include 
+    file="$(find duckietown_visualization)/launch/publish_map.launch">
+        <arg name="map_name" value="$(arg map_name)"/>
+        <arg name="rviz_config" 
+            value="$(find visualization_example)/config/myconfig.rviz"/>
+    </include>
+
+    <node pkg="duckietown_visualization" name="duckiebot_marker_publisher" 
+        type="publish_duckiebots.py" output="screen"/>
+        
+    <node pkg="tf"
+        type="static_transform_publisher"
+        name="map_to_duckiebot_link_broadcaster"
+        args="0 0 0 0 0 0 map duckiebot_link 10" />
+</launch>

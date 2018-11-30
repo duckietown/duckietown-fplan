@@ -5,9 +5,9 @@ import duckietown_world as dw
 
 
 class StateManager(object):
-    def __init__(self):
+    def __init__(self, map_name, n_duckies):
         # Parameters
-        self.n_duckies = 3  # Number of duckies
+        self.n_duckies = n_duckies  # Number of duckies
         self.fov = [2.0 / 3.0 * np.pi,
                     2.0]  # Field of view (angle, distance in tiles)
         self.max_vel = 0.5  # Max. velocity in m/s
@@ -15,7 +15,7 @@ class StateManager(object):
         self.duckiebot_length = 0.2  # Length of duckiebot in m
 
         # Map
-        self.map = dw.load_map('4way')
+        self.map = dw.load_map(map_name)
         self.skeleton_graph = dw.get_skeleton_graph(self.map['tilemap'])
 
         # State of duckies
