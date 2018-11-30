@@ -1,0 +1,7 @@
+<launch>
+    <node pkg="flock_simulator" name="flock_simulator_node" 
+        type="flock_simulator_node.py" output="screen" /> 
+
+    <node pkg="flock_planner" name="flock_planner_node" 
+        type="flock_planner_node.py" output="screen" /> 
+</launch>
