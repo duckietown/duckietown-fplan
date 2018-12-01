@@ -165,50 +165,26 @@ def putOnRails(pose, command, dt):
             position = pose.p
     elif omega > 0:
         radius = 0.72
+        midpoint = [
+            np.round(pose.p[0] + np.cos(pose.theta + np.pi / 2) * radius),
+            np.round(pose.p[1] + np.sin(pose.theta + np.pi / 2) * radius),
+        ]
+        position = [
+            midpoint[0] + np.sin(pose.theta) * radius,
+            midpoint[1] - np.cos(pose.theta) * radius
+        ]
         theta = pose.theta
-        if pose.theta >= 0 and pose.theta < np.pi / 2:
-            position = [
-                np.floor(pose.p[0]) + np.sin(theta) * radius,
-                np.ceil(pose.p[1]) - np.cos(theta) * radius
-            ]
-        elif pose.theta >= np.pi / 2 and pose.theta < np.pi:
-            position = [
-                np.floor(pose.p[0]) + np.sin(theta) * radius,
-                np.floor(pose.p[1]) - np.cos(theta) * radius
-            ]
-        elif pose.theta >= -np.pi and pose.theta < -np.pi / 2:
-            position = [
-                np.ceil(pose.p[0]) + np.sin(theta) * radius,
-                np.floor(pose.p[1]) - np.cos(theta) * radius
-            ]
-        elif pose.theta >= -np.pi / 2 and pose.theta < 0:
-            position = [
-                np.ceil(pose.p[0]) + np.sin(theta) * radius,
-                np.ceil(pose.p[1]) - np.cos(theta) * radius
-            ]
     elif omega < 0:
         radius = 0.28
+        midpoint = [
+            np.round(pose.p[0] + np.cos(pose.theta - np.pi / 2) * radius),
+            np.round(pose.p[1] + np.sin(pose.theta - np.pi / 2) * radius),
+        ]
+        position = [
+            midpoint[0] - np.sin(pose.theta) * radius,
+            midpoint[1] + np.cos(pose.theta) * radius
+        ]
         theta = pose.theta
-        if pose.theta >= 0 and pose.theta < np.pi / 2:
-            position = [
-                np.ceil(pose.p[0]) - np.sin(theta) * radius,
-                np.floor(pose.p[1]) + np.cos(theta) * radius
-            ]
-        elif pose.theta >= np.pi / 2 and pose.theta < np.pi:
-            position = [
-                np.ceil(pose.p[0]) - np.sin(theta) * radius,
-                np.ceil(pose.p[1]) + np.cos(theta) * radius
-            ]
-        elif pose.theta >= -np.pi and pose.theta < -np.pi / 2:
-            position = [
-                np.floor(pose.p[0]) - np.sin(theta) * radius,
-                np.ceil(pose.p[1]) + np.cos(theta) * radius
-            ]
-        elif pose.theta >= -np.pi / 2 and pose.theta < 0:
-            position = [
-                np.floor(pose.p[0]) - np.sin(theta) * radius,
-                np.floor(pose.p[1]) + np.cos(theta) * radius
-            ]
 
     return dw.SE2Transform(position, theta)
 
