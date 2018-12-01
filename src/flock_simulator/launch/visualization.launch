@@ -1,11 +1,11 @@
 <launch>
     <arg name="map_name" default="robotarium1"/>
+    <arg name="rviz_config" default="$(find flock_simulator)/config/$(arg map_name).rviz"/>
 
     <include 
     file="$(find duckietown_visualization)/launch/publish_map.launch">
         <arg name="map_name" value="$(arg map_name)"/>
-        <arg name="rviz_config" 
-            value="$(find flock_simulator)/config/$(arg map_name).rviz"/>
+        <arg name="rviz_config" value="$(arg rviz_config)"/>
     </include>
 
     <node pkg="duckietown_visualization" name="duckiebot_marker_publisher" 
