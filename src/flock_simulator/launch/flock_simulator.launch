@@ -1,6 +1,7 @@
 <launch>
     <arg name="map_name" default="4way"/>
     <arg name="n_duckies" default="3"/>
+    <arg name="rviz_config" default="$(find flock_simulator)/config/$(arg map_name).rviz"/>
 
     <node pkg="flock_simulator" name="flock_simulator_node" 
     type="flock_simulator_node.py" output="screen">
@@ -13,5 +14,6 @@
 
     <include file="$(find flock_simulator)/launch/visualization.launch">
         <arg name="map_name" value="$(arg map_name)"/>
+        <arg name="rviz_config" value="$(arg rviz_config)"/>
     </include>
 </launch>
