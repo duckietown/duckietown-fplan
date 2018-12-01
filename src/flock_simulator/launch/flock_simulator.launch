@@ -5,7 +5,7 @@
     <node pkg="flock_simulator" name="flock_simulator_node" 
     type="flock_simulator_node.py" output="screen">
         <param name="map_name" value="$(arg map_name)"/>
-        <param name="n_duckies" value="3"/>
+        <param name="n_duckies" value="$(arg n_duckies)"/>
     </node> 
 
     <node pkg="flock_planner" name="flock_planner_node" 
