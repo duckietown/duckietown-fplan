@@ -20,9 +20,6 @@ velocity  # Duckie's velocity (currently set as last command)
 
 The uncontrolled duckies will slow down if there is another duckie in front of them, unless they are on an intersection. Collisions and traffic rules are not yet implemented.
 
-## Flock simulator GUI
-WIP
-
 ## Flock planner
 ```
 rosrun flock_planner flock_planner_node.py
