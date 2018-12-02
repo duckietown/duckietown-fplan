@@ -6,10 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /Duckietown Map1
-        - /Map Origin1
-        - /Duckiebots1
-        - /Duckiebot link1
       Splitter Ratio: 0.5
     Tree Height: 676
   - Class: rviz/Selection
@@ -62,12 +58,12 @@ Visualization Manager:
       Queue Size: 100
       Value: true
     - Class: rviz/Axes
-      Enabled: true
+      Enabled: false
       Length: 1
       Name: Map Origin
       Radius: 0.100000001
       Reference Frame: map
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /duckiebots_markers
@@ -77,12 +73,12 @@ Visualization Manager:
       Queue Size: 100
       Value: true
     - Class: rviz/Axes
-      Enabled: true
+      Enabled: false
       Length: 1
       Name: Duckiebot link
       Radius: 0.100000001
       Reference Frame: duckiebot_link
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

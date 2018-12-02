@@ -1,8 +1,7 @@
 import random
+import utils
 import numpy as np
 import duckietown_world as dw
-import geometry as geo
-import time
 
 
 def getRandomCommand(duckies, duckie, stop_distance, max_vel, tile_size, dt):
@@ -12,7 +11,7 @@ def getRandomCommand(duckies, duckie, stop_distance, max_vel, tile_size, dt):
 
     duckie_pose = duckie['pose']
     point_pose = duckie['next_point']['pose']
-    ang_diff = limitAngle(point_pose.theta - duckie_pose.theta)
+    ang_diff = utils.limitAngle(point_pose.theta - duckie_pose.theta)
 
     linear = max_vel
 
@@ -27,8 +26,8 @@ def getRandomCommand(duckies, duckie, stop_distance, max_vel, tile_size, dt):
     else:
         angular = 0.0
         for visible_duckie in duckie['in_fov']:
-            dist = distance(duckie['pose'],
-                            duckies[visible_duckie]['pose']) * tile_size
+            dist = utils.distance(duckie['pose'],
+                                  duckies[visible_duckie]['pose']) * tile_size
             if dist < 2.0 * stop_distance:
                 stop_vel = max((dist / stop_distance - 1.0) * max_vel, 0.0)
                 linear = min(linear, stop_vel)
@@ -119,9 +118,9 @@ def commandToPose(pose, command, tile_size, dt):
     v = command['linear'] / tile_size
     omega = command['angular']
 
-    theta_new = limitAngle(pose.theta + omega * dt)
+    theta_new = utils.limitAngle(pose.theta + omega * dt)
 
-    theta_avg = pose.theta + subtractAngle(theta_new, pose.theta) / 2
+    theta_avg = pose.theta + utils.subtractAngle(theta_new, pose.theta) / 2
 
     position_new = [
         pose.p[0] + v * np.cos(theta_avg) * dt,
@@ -151,7 +150,7 @@ def putOnRails(pose, command, dt):
         if abs(pose.theta) < d_angle / 2:
             theta = 0.0
             position = [pose.p[0], np.floor(pose.p[1]) + 0.28]
-        elif abs(limitAngle(pose.theta - np.pi)) < d_angle / 2:
+        elif abs(utils.limitAngle(pose.theta - np.pi)) < d_angle / 2:
             theta = -np.pi
             position = [pose.p[0], np.floor(pose.p[1]) + 0.72]
         elif abs(pose.theta - np.pi / 2) < d_angle / 2:
@@ -194,47 +193,23 @@ def isInFront(pose1, pose2, angle):
     # frame2: Object's pose
     # angle: Angle of cone that defines "front" ("field of view")
     return abs(
-        subtractAngle(
+        utils.subtractAngle(
             np.arctan2(pose2.p[1] - pose1.p[1], pose2.p[0] - pose1.p[0]),
             pose1.theta)) < angle / 2
 
 
-def distance(pose1, pose2):
-    # Distance from poses
-    return np.hypot(pose1.p[0] - pose2.p[0], pose1.p[1] - pose2.p[1])
-
-
 def lane_distance(duckies, duckie_id, skeleton_graph):
-    #find the nearest control point and send the relative distance along x axis
+    # Find the nearest control point and send the relative distance along x axis
     duckie = duckies[duckie_id]
     lane_control_points = skeleton_graph.root2.children[duckie['next_point'][
         'lane']].control_points
     lane_width = skeleton_graph.root2.children[duckie['next_point'][
         'lane']].width
     min_dist = 10000
-    #print(duckie)
+
     for cp in lane_control_points:
-        #print("\nThis is control point pose \n ")
-        #print(cp)
-        #print("\nThis is pose\n")
-        #print(duckie['pose'])
         dist = cp.p[0] - duckie['pose'].p[0]
         if dist < min_dist:
             min_dist = dist
-        #q2_from_q1 = geo.SE2.multiply( geo.SE2.inverse(duckie['pose']),cp )
-        #print(q2_from_q1)
-    #print(min_dist)
+
     return min_dist > lane_width / 2
-
-
-def limitAngle(angle):
-    # Keep angle between -pi and pi
-    return (angle + np.pi) % (2 * np.pi) - np.pi
-
-
-def subtractAngle(angle1, angle2):
-    # Select the difference that is less than pi
-    diff = angle1 - angle2
-    if abs(diff) > np.pi:
-        return limitAngle(2 * np.pi - diff)
-    return diff

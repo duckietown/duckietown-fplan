@@ -1,4 +1,5 @@
 import duckie_dynamics
+import utils
 import numpy as np
 import networkx as nx
 import duckietown_world as dw
@@ -11,7 +12,7 @@ class StateManager(object):
         self.fov = [2.0 / 3.0 * np.pi,
                     2.0]  # Field of view (angle, distance in tiles)
         self.max_vel = 0.5  # Max. velocity in m/s
-        self.stop_distance = 0.2  # Distance between duckies in m
+        self.stop_distance = 0.1  # Distance between duckies in m
         self.duckiebot_length = 0.2  # Length of duckiebot in m
 
         # Map
@@ -33,7 +34,8 @@ class StateManager(object):
                 self.duckies[duckie_id]['next_point'] = None
             else:
                 command = duckie_dynamics.getRandomCommand(
-                    self.duckies, duckie, self.stop_distance, self.max_vel,
+                    self.duckies, duckie,
+                    self.stop_distance + self.duckiebot_length, self.max_vel,
                     self.map.tile_size, dt)
 
             # Update duckie's state
@@ -55,7 +57,7 @@ class StateManager(object):
                 if duckie_id == other_duckie:
                     continue
                 other_pose = self.duckies[other_duckie]['pose']
-                if duckie_dynamics.distance(
+                if utils.distance(
                         duckie_pose, other_pose
                 ) < self.fov[1] and duckie_dynamics.isInFront(
                         duckie_pose, other_pose, self.fov[0]):
@@ -69,7 +71,7 @@ class StateManager(object):
                     continue
                 other_pose = self.duckies[other_duckie]['pose']
                 self_pose = self.duckies[duckie_id]['pose']
-                distance = duckie_dynamics.distance(other_pose, self_pose)
+                distance = utils.distance(other_pose, self_pose)
                 lane_distance = duckie_dynamics.lane_distance(
                     self.duckies, duckie_id, self.skeleton_graph)
                 if distance < self.duckiebot_length:
