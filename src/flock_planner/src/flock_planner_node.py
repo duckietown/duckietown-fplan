@@ -18,7 +18,7 @@ class FlockPlannerNode(object):
             '/flock_simulator/commands', FlockCommand, queue_size=1)
 
         # Timer
-        self.sim_frequency = 20.0  # Frequency of simulation in Hz
+        self.sim_frequency = 30.0  # Frequency of simulation in Hz
         self.request_timer = rospy.Timer(
             rospy.Duration.from_sec(1.0 / self.sim_frequency), self.cbTimer)
         self.isUpdating = False

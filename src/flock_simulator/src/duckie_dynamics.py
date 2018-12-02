@@ -1,10 +1,12 @@
 import random
 import utils
 import numpy as np
+import traffic_rules as tr
 import duckietown_world as dw
 
 
-def getRandomCommand(duckies, duckie, stop_distance, max_vel, tile_size, dt):
+def getRandomCommand(duckies, duckie, stop_distance, duckiebot_length, max_vel,
+                     tile_size, dt):
     # If no next_point, stand still
     if not duckie['next_point']:
         return {'linear': 0, 'angular': 0, 'on_rails': False}
@@ -13,24 +15,19 @@ def getRandomCommand(duckies, duckie, stop_distance, max_vel, tile_size, dt):
     point_pose = duckie['next_point']['pose']
     ang_diff = utils.limitAngle(point_pose.theta - duckie_pose.theta)
 
-    linear = max_vel
+    linear = tr.getVelocity(duckies, duckie, stop_distance, duckiebot_length,
+                            max_vel, tile_size)
 
     d_angle = linear / 0.28 * dt
 
     if ang_diff > d_angle / 2:
-        radius = 0.72
+        radius = 0.72 * tile_size
         angular = linear / radius
     elif ang_diff < -d_angle / 2:
-        radius = 0.28
+        radius = 0.28 * tile_size
         angular = -linear / radius
     else:
         angular = 0.0
-        for visible_duckie in duckie['in_fov']:
-            dist = utils.distance(duckie['pose'],
-                                  duckies[visible_duckie]['pose']) * tile_size
-            if dist < 2.0 * stop_distance:
-                stop_vel = max((dist / stop_distance - 1.0) * max_vel, 0.0)
-                linear = min(linear, stop_vel)
 
     return {'linear': linear, 'angular': angular, 'on_rails': True}
 
@@ -131,20 +128,18 @@ def commandToPose(pose, command, tile_size, dt):
 
     # If duckiebot on rails, put on rails
     if command['on_rails']:
-        pose_new = putOnRails(pose_new, command, dt)
+        pose_new = putOnRails(pose_new, v, omega, dt)
 
     return pose_new
 
 
-def putOnRails(pose, command, dt):
+def putOnRails(pose, v, omega, dt):
     # Fixes deviations from the ideal path.
     # Assumes duckiebot is turning when angular velocity != 0 and places
-    # duckiebot on curve depending on current orientation, which might
-    # lead to "teleportation".
+    # duckiebot on curve depending on current orientation
 
-    omega = command['angular']
-    linear = command['linear']
-    d_angle = linear / 0.28 * dt
+    d_dist = v * dt
+    d_angle = v / 0.28 * dt
 
     if omega == 0:
         if abs(pose.theta) < d_angle / 2:
@@ -185,7 +180,14 @@ def putOnRails(pose, command, dt):
         ]
         theta = pose.theta
 
-    return dw.SE2Transform(position, theta)
+    pose_new = dw.SE2Transform(position, theta)
+
+    if utils.distance(pose, pose_new) > 2 * d_dist:
+        print(d_dist, utils.distance(pose, pose_new))
+        pose_new = pose
+        print('Not able to put duckie on rails.')
+
+    return pose_new
 
 
 def isInFront(pose1, pose2, angle):

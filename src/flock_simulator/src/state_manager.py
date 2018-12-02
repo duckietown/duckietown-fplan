@@ -34,9 +34,9 @@ class StateManager(object):
                 self.duckies[duckie_id]['next_point'] = None
             else:
                 command = duckie_dynamics.getRandomCommand(
-                    self.duckies, duckie,
-                    self.stop_distance + self.duckiebot_length, self.max_vel,
-                    self.map.tile_size, dt)
+                    self.duckies, duckie, self.stop_distance,
+                    self.duckiebot_length, self.max_vel, self.map.tile_size,
+                    dt)
 
             # Update duckie's state
             duckies_update[duckie_id] = duckie_dynamics.updateDuckie(
