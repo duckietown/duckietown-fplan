@@ -50,16 +50,13 @@ class FlockSimulatorNode(object):
         self.publishTf(self.state_manager.duckies)
 
     def getCommands(self, msg):
-        commands = []
+        commands = {}
         for command in msg.duckie_commands:
-            commands.append({
-                'duckie_id': command.duckie_id,
-                'command': {
-                    'linear': command.linear.x,
-                    'angular': command.angular.z
-                },
+            commands[command.duckie_id.data] = {
+                'linear': command.command.linear.x,
+                'angular': command.command.angular.z,
                 'on_rails': command.on_rails.data
-            })
+            }
         return commands
 
     def generateFlockStateMsg(self, duckies):

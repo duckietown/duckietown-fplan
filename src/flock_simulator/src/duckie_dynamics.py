@@ -64,7 +64,7 @@ def getNextPoint(skeleton_graph, current_pose, current_point):
 
 def updateDuckie(duckies, duckie, command, skeleton_graph, tile_size, dt):
     pose_new = commandToPose(duckie['pose'], command, tile_size, dt)
-    velocity_new = command
+    velocity_new = {'linear': command['linear'], 'angular': command['angular']}
     next_point_new = getNextPoint(
         skeleton_graph, pose_new,
         duckie['next_point']) if duckie['next_point'] else None
