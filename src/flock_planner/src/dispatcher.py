@@ -1,4 +1,9 @@
+#!/usr/bin/env python
+
 import random
+import rospy
+import time
+from flock_simulator.msg  import FlockCommand
 
 # TODO Implement duckie initial(t=0) status = 'IDLE'
 
@@ -8,6 +13,7 @@ class Dispatcher(object):
         self.commands = []
 
     def update(self, state):
+        return  # Remove once implemented
         duckies = state.duckies
         open_requests = state.open_requests
 
@@ -62,7 +68,7 @@ class Dispatcher(object):
             return 0  #todo check this case
         closest_request = open_requests[0]
         for open_request in open_requests:
-            if self.dist(pose, open_request) < self.dist(pose, closest_request):
+            if self.dist(pose, open_request) < self.dist(pose, closest_request)
                 closest_request = open_request
             return closest_request
 
