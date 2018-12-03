@@ -36,7 +36,7 @@ class StateManager(object):
                 command = duckie_dynamics.getRandomCommand(
                     self.duckies, duckie, self.stop_distance,
                     self.duckiebot_length, self.max_vel, self.map.tile_size,
-                    dt)
+                    self.skeleton_graph, dt)
 
             # Update duckie's state
             duckies_update[duckie_id] = duckie_dynamics.updateDuckie(

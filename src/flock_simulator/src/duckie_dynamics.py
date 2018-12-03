@@ -6,7 +6,7 @@ import duckietown_world as dw
 
 
 def getRandomCommand(duckies, duckie, stop_distance, duckiebot_length, max_vel,
-                     tile_size, dt):
+                     tile_size, skeleton_graph, dt):
     # If no next_point, stand still
     if not duckie['next_point']:
         return {'linear': 0, 'angular': 0, 'on_rails': False}
@@ -16,7 +16,7 @@ def getRandomCommand(duckies, duckie, stop_distance, duckiebot_length, max_vel,
     ang_diff = utils.limitAngle(point_pose.theta - duckie_pose.theta)
 
     linear = tr.getVelocity(duckies, duckie, stop_distance, duckiebot_length,
-                            max_vel, tile_size)
+                            max_vel, tile_size, skeleton_graph)
 
     d_angle = linear / 0.28 * dt
 
@@ -50,11 +50,8 @@ def getNextPoint(skeleton_graph, current_pose, current_point):
         }
 
     # Find random next lane
-    edges = list(skeleton_graph.G.edges(data=True))
-    edge_data = [
-        edge for edge in edges if edge[2]['lane'] == current_point['lane']
-    ]
-    node = edge_data[0][1]
+    node = utils.nodeFromLane(
+        list(skeleton_graph.G.edges(data=True)), current_point['lane'])
     node_next = random.choice(list(skeleton_graph.G.neighbors(node)))
     lane_next = skeleton_graph.G.get_edge_data(node, node_next)[0]['lane']
     pose_next = skeleton_graph.root2.children[lane_next].control_points[0]
