@@ -9,7 +9,7 @@ from flock_simulator.msg  import FlockCommand
 
 
 class Dispatcher(object):
-    def __init__(self):
+    def __init__(self, map_name):
         self.commands = []
 
     def update(self, state):
@@ -53,7 +53,7 @@ class Dispatcher(object):
                 #endlocation reached, request fullfilled
                 if pose == target_location:
                     duckie.status == 'IDLE'
-                    target_location = 0
+                    target_location = pose
 
         return self.generateCommands(self, pose, target_location)
 
