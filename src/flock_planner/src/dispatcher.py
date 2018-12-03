@@ -8,8 +8,9 @@ class Dispatcher(object):
         self.commands = []
 
     def update(self, state):
+        return  # Remove once implemented
         duckies = state.duckies
-        open_requests = state.open_request
+        open_requests = state['open_request']
 
         for duckie in duckies:
             pose = duckies[duckie]['pose']
@@ -20,7 +21,7 @@ class Dispatcher(object):
             if status == 'IDLE':
 
                 #find new costumer
-                open_request = getClosestRequest(open_requests, pose)
+                open_request = self.getClosestRequest(open_requests, pose)
                 start_loc = open_request['startlocation']
                 end_loc = open_request['endlocation']
 
@@ -48,14 +49,15 @@ class Dispatcher(object):
                 if pose == target_location:
                     duckie.status == 'IDLE'
 
-        return duckies  #with duckietarget location
+        self.commands = []  #with duckietarget location
 
     def getClosestRequest(self, open_requests, pose):
         if open_requests == 0:
             return 0  #todo check this case
         closest_request = open_requests[0]
         for open_request in open_requests:
-            if dist(pose, open_request) < dist(pose, closest_request):
+            if self.dist(pose, open_request) < self.dist(
+                    pose, closest_request):
                 closest_request = open_request
             return closest_request
 

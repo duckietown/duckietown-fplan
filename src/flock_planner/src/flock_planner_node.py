@@ -12,7 +12,7 @@ class FlockPlannerNode(object):
 
         # Dispatcher
         self.dispatcher = dispatcher.Dispatcher()
-        self.state = NULL
+        self.state = []
 
         # Subscribers
         self.sub_paths = rospy.Subscriber(
