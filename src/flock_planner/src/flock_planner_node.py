@@ -2,12 +2,17 @@
 
 import rospy
 import time  # TODO
+import dispatcher
 from flock_simulator.msg import FlockState, FlockCommand
 
 
 class FlockPlannerNode(object):
     def __init__(self):
         self.node_name = rospy.get_name()
+
+        # Dispatcher
+        self.dispatcher = dispatcher.Dispatcher()
+        self.state = NULL
 
         # Subscribers
         self.sub_paths = rospy.Subscriber(
@@ -24,7 +29,7 @@ class FlockPlannerNode(object):
         self.isUpdating = False
 
     def cbState(self, msg):
-        pass
+        self.state = self.getStateFromMessage(msg)
 
     def cbTimer(self, event):
         # Don't update if last timer callback hasn't finished
@@ -34,18 +39,21 @@ class FlockPlannerNode(object):
 
         # Update state
         self.isUpdating = True
-        time.sleep(.01)
+        self.dispatcher.update(self.state)
         self.isUpdating = False
 
         # Publish
-        msg_commands = self.generateCommands()
+        msg_commands = self.generateCommands(self.dispatcher.commands)
         self.pub_commands.publish(msg_commands)
 
-    def generateCommands(self):
+    def generateCommands(self, commands):
         msg = FlockCommand()
         msg.header.stamp = rospy.Time.now()
         msg.dt.data = 1.0 / self.sim_frequency
         return msg
+
+    def getStateFromMessage(self, msg):
+        pass
 
     def onShutdown(self):
         rospy.loginfo('[%s] Shutdown.' % (self.node_name))
