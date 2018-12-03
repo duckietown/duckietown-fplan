@@ -4,7 +4,6 @@ import numpy as np
 
 def getVelocity(duckies, duckie, stop_distance, duckiebot_length, max_vel,
                 tile_size):
-
     # Distance to position where duckie wants to stand still
     waypoint_distance = 2 * tile_size
 
@@ -38,6 +37,7 @@ def getVelocity(duckies, duckie, stop_distance, duckiebot_length, max_vel,
                 distance_to_point - stop_distance - duckiebot_length / 2,
                 waypoint_distance)
 
+    # Prevent waypoint to be negative
     waypoint_distance = max(waypoint_distance, 0.0)
 
     # Start braking if waypoint is 2 duckiebot_lengths away

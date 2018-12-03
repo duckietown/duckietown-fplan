@@ -34,7 +34,7 @@ Visualization Manager:
       Cell Size: 1
       Class: rviz/Grid
       Color: 160; 160; 164
-      Enabled: true
+      Enabled: false
       Line Style:
         Line Width: 0.0299999993
         Value: Lines
@@ -47,13 +47,13 @@ Visualization Manager:
       Plane: XY
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /duckiebots_markers
       Name: MarkerArray
       Namespaces:
-        duckiebots: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray

@@ -72,11 +72,11 @@ class StateManager(object):
                 other_pose = self.duckies[other_duckie]['pose']
                 self_pose = self.duckies[duckie_id]['pose']
                 distance = utils.distance(other_pose, self_pose)
-                lane_distance = duckie_dynamics.lane_distance(
-                    self.duckies, duckie_id, self.skeleton_graph)
                 if distance < self.duckiebot_length:
                     c_level = 1
-                elif lane_distance:
+                # Only check if next_point is defined for duckie
+                elif self.duckies[duckie_id]['next_point'] and duckie_dynamics.lane_distance(
+                        self.duckies, duckie_id, self.skeleton_graph):
                     c_level = 2
                 else:
                     c_level = 0
