@@ -43,10 +43,10 @@ class FlockPlannerNode(object):
         self.isUpdating = False
 
         # Publish
-        msg_commands = self.generateCommands(self.dispatcher.commands)
+        msg_commands = self.generateMessages(self.dispatcher.commands)
         self.pub_commands.publish(msg_commands)
 
-    def generateCommands(self, commands):
+    def generateMessages(self, commands):
         msg = FlockCommand()
         msg.header.stamp = rospy.Time.now()
         msg.dt.data = 1.0 / self.sim_frequency
