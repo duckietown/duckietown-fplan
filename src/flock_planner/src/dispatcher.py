@@ -60,10 +60,10 @@ class Dispatcher(object):
                     target_location = pose  # stay
 
             # generate path
-            paths[duckie_id]= generatePath(pose, target_location)
+            paths[duckie_id]= self.generatePath(pose, target_location)
 
         # generateCommands from path
-        return generateCommands(paths)
+        return self.generateCommands(paths)
 
     def generateCommands(self, paths):
         # TODO generate commands from path # maybe implement in external file // no userfile //
