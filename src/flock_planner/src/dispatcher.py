@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import rospy
 import duckietown_world as dw
 import networkx as nx
 from flock_simulator.msg import FlockState, FlockCommand
@@ -21,6 +20,7 @@ class Dispatcher(object):
         return  # TODO Remove once implemented
         duckies = state.duckies
         open_requests = state.open_requests
+        paths = []
 
         for duckie_id in duckies:
             pose = duckies[duckie_id]['pose']
@@ -46,7 +46,7 @@ class Dispatcher(object):
                     duckies[duckie_id]['status'] = 'GOINGTO_COSTUMER'
                     target_location = start_loc  # put to duckietarget location
 
-                # no requests TODO REBALANCE
+                # no requests + REBALANCE
                 else:
                     duckies[duckie_id]['status'] = 'IDLE'
                     target_location = pose  # stay
@@ -60,19 +60,15 @@ class Dispatcher(object):
                     target_location = pose  # stay
 
             # generate path
-            duckies[duckie_id].path = generatePath(pose, target_location)
+            paths[duckie_id]= generatePath(pose, target_location)
 
         # generateCommands from path
-        return generateCommands(paths)  # TODO Implement a dispatcher manager or update FlockPannerNode
+        return generateCommands(paths)
 
     def generateCommands(self, paths):
-        # todo generate commands from path
+        # TODO generate commands from path # maybe implement in external file // no userfile //
+        # ask cliff how commands are built
         return self.commands
-
-    def generatePath(self, current_pose, target_location):
-        return nx.dijksta_path(self.skeleton_graph,
-                               current_pose,  # probably wrong
-                               target_location)  # probably wrong
 
     def getClosestRequest(self, open_requests, pose):
         if not open_requests:  # if no requests
@@ -85,7 +81,17 @@ class Dispatcher(object):
         return closest_request
 
     def dist(self, pose, request):
-        # check if weighted graph
+        # generate dijkstra_distance (closest)
         return nx.dijkstra_path_length(self.skeleton_graph,
-                                       pose,  # wrong
-                                       request['start_loc'])  # wrong
+                                       self.node(pose),
+                                       self.node(request['start_loc']))
+
+    def generatePath(self, current_pose, target_location):
+        # generate dijkstra_path
+        return nx.dijkstra_path(self.skeleton_graph,
+                               self.node(current_pose),
+                               self.node(target_location))
+
+    def node(self, pose):
+        node = 0 #TODO
+        return node
