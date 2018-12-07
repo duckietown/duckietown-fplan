@@ -4,8 +4,8 @@ import duckietown_world as dw
 import networkx as nx
 from flock_simulator.msg import FlockState, FlockCommand
 
-
 # TODO Implement duckie initial(t=0) status = 'IDLE'
+
 
 class Dispatcher(object):
     def __init__(self, map_name):
@@ -24,13 +24,14 @@ class Dispatcher(object):
 
         for duckie_id in duckies:
             pose = duckies[duckie_id]['pose']
-            target_location = duckies[duckie_id]['target_location']  # TODO ADD TO DUCKIESTATUS
+            target_location = duckies[duckie_id][
+                'target_location']  # TODO ADD TO DUCKIESTATUS
 
             # IDLE
             if duckies[duckie_id]['status'] == 'IDLE':
 
                 # find closest costumer
-                open_request = self.getClosestRequest(self, open_requests, pose)
+                open_request = self.getClosestRequest(open_requests, pose)
                 start_loc = open_request['startlocation']
                 end_loc = open_request['endlocation']
 
@@ -60,10 +61,10 @@ class Dispatcher(object):
                     target_location = pose  # stay
 
             # generate path
-            paths[duckie_id]= generatePath(pose, target_location)
+            paths[duckie_id] = self.generatePath(pose, target_location)
 
         # generateCommands from path
-        return generateCommands(paths)
+        return self.generateCommands(paths)
 
     def generateCommands(self, paths):
         # TODO generate commands from path # maybe implement in external file // no userfile //
@@ -75,23 +76,22 @@ class Dispatcher(object):
             return
         closest_request = open_requests[0]
         for open_request in open_requests:
-            if self.dist(pose, open_request) < self.dist(pose, closest_request):
+            if self.dist(pose, open_request) < self.dist(
+                    pose, closest_request):
                 closest_request = open_request
 
         return closest_request
 
     def dist(self, pose, request):
         # generate dijkstra_distance (closest)
-        return nx.dijkstra_path_length(self.skeleton_graph,
-                                       self.node(pose),
+        return nx.dijkstra_path_length(self.skeleton_graph, self.node(pose),
                                        self.node(request['start_loc']))
 
     def generatePath(self, current_pose, target_location):
         # generate dijkstra_path
-        return nx.dijkstra_path(self.skeleton_graph,
-                               self.node(current_pose),
-                               self.node(target_location))
+        return nx.dijkstra_path(self.skeleton_graph, self.node(current_pose),
+                                self.node(target_location))
 
     def node(self, pose):
-        node = 0 #TODO
+        node = 0  #TODO
         return node
