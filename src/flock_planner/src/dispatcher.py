@@ -8,90 +8,128 @@ from flock_simulator.msg import FlockState, FlockCommand
 
 
 class Dispatcher(object):
-    def __init__(self, map_name):
+    def __init__(self, skeleton_graph):
+        self.skeleton_graph = skeleton_graph
+
         # Commands
         self.commands = []
 
-        # Load Grap
-        self.map = dw.load_map(map_name)
-        self.skeleton_graph = dw.get_skeleton_graph(self.map['tilemap'])
-
     def update(self, state):
-        return  # TODO Remove once implemented
-        duckies = state.duckies
-        open_requests = state.open_requests
+        # EXAMPLE FOR STATE:
+        # state = {
+        #   'duckies': [
+        #       'duckie-0': {
+        #           'status': 'IDLE',
+        #           'lane': 'l001',
+        #       },
+        #       'duckie-1': {
+        #           'status': 'IDLE',
+        #           'lane': 'l042',
+        #       }, ...
+        #   ]
+        #   'requests: [
+        #       {
+        #           'time': [time of request],
+        #           'duckie_id': [duckie which is serving the request (empty if unassigned)],
+        #           'start_node': [start node of graph (networkx)],
+        #           'end_node': [end node of graph (networkx)],
+        #       }, ...
+        #   ]
+        # }
+
+        duckies = state['duckies']
+        requests = state['requests']
         paths = []
 
         for duckie_id in duckies:
-            pose = duckies[duckie_id]['pose']
-            target_location = duckies[duckie_id][
-                'target_location']  # TODO ADD TO DUCKIESTATUS
+            duckie = duckies[duckie_id]
+            lane = duckie['lane']  # Lane the duckie is currently on
+            node = self.node(lane)  # Node the duckie is heading to
 
-            # IDLE
-            if duckies[duckie_id]['status'] == 'IDLE':
+            # TODO
 
-                # find closest costumer
-                open_request = self.getClosestRequest(open_requests, pose)
-                start_loc = open_request['startlocation']
-                end_loc = open_request['endlocation']
+            # # IDLE
+            # if duckie['status'] == 'IDLE':
 
-                # pick up costumer
-                if start_loc == pose:
-                    # change status AND delete open_request
-                    duckies[duckie_id]['status'] = 'WITH_COSTUMER'
-                    target_location = end_loc  # put to duckietarget location
-                    open_requests.remove(open_request)
+            #     # find closest costumer
+            #     open_request = self.getClosestRequest(requests, pose)
+            #     start_loc = open_request['startlocation']
+            #     end_loc = open_request['endlocation']
 
-                # going to costumer pickup costumer
-                elif start_loc != pose:
-                    duckies[duckie_id]['status'] = 'GOINGTO_COSTUMER'
-                    target_location = start_loc  # put to duckietarget location
+            #     # pick up costumer
+            #     if start_loc == pose:
+            #         # change status AND delete open_request
+            #         duckie['status'] = 'WITH_COSTUMER'
+            #         target_location = end_loc  # put to duckietarget location
+            #         requests.remove(open_request)
 
-                # no requests + REBALANCE
-                else:
-                    duckies[duckie_id]['status'] = 'IDLE'
-                    target_location = pose  # stay
+            #     # going to costumer pickup costumer
+            #     elif start_loc != pose:
+            #         duckie['status'] = 'GOINGTO_COSTUMER'
+            #         target_location = start_loc  # put to duckietarget location
 
-            # WITH COSTUMER
-            elif duckies[duckie_id]['status'] == 'WITH_COSTUMER':
+            #     # no requests + REBALANCE
+            #     else:
+            #         duckie['status'] = 'IDLE'
+            #         target_location = pose  # stay
 
-                # endlocation reached, request fullfilled
-                if pose == target_location:
-                    duckies[duckie_id]['status'] = 'IDLE'
-                    target_location = pose  # stay
+            # # WITH COSTUMER
+            # elif duckie['status'] == 'WITH_COSTUMER':
 
-            # generate path
-            paths[duckie_id]= self.generatePath(pose, target_location)
+            #     # endlocation reached, request fullfilled
+            #     if pose == target_location:
+            #         duckie['status'] = 'IDLE'
+            #         target_location = pose  # stay
+
+            # # generate path
+            # path = self.generatePath(pose, target_location)
 
         # generateCommands from path
-        return self.generateCommands(paths)
+        # EXAMPLE FOR PATHS:
+        # paths = [
+        #   {
+        #       'duckie_id': 'duckie-0',
+        #       'path': [list of nodes]
+        #   },
+        #   {
+        #       'duckie_id': 'duckie-1',
+        #       'path': [list of nodes]
+        #   }, ...
+        # ]
+        self.commands = self.generateCommands(paths)
 
     def generateCommands(self, paths):
-        # TODO generate commands from path # maybe implement in external file // no userfile //
-        # ask cliff how commands are built
-        return self.commands
+        commands = []
+        for path in paths:
+            command = {
+                'duckie_id': path['duckie_id'],
+                'goal_node': path['path'][0]
+            }
+            self.commands.append(command)
+        return commands
 
-    def getClosestRequest(self, open_requests, pose):
-        if not open_requests:  # if no requests
+    def getClosestRequest(self, requests, node):
+        if not requests:  # if no requests
             return
-        closest_request = open_requests[0]
-        for open_request in open_requests:
-            if self.dist(pose, open_request) < self.dist(
-                    pose, closest_request):
+        closest_request = requests[0]
+        for open_request in requests:
+            if self.dist(node, open_request) < self.dist(
+                    node, closest_request):
                 closest_request = open_request
 
         return closest_request
 
-    def dist(self, pose, request):
+    def dist(self, node, request):
         # generate dijkstra_distance (closest)
-        return nx.dijkstra_path_length(self.skeleton_graph, self.node(pose),
-                                       self.node(request['start_loc']))
+        return nx.dijkstra_path_length(self.skeleton_graph, node,
+                                       request['end_node'])
 
-    def generatePath(self, current_pose, target_location):
+    def generatePath(self, current_node, goal_node):
         # generate dijkstra_path
-        return nx.dijkstra_path(self.skeleton_graph, self.node(current_pose),
-                                self.node(target_location))
+        return nx.dijkstra_path(self.skeleton_graph, current_node, goal_node)
 
-    def node(self, pose):
-        node = 0  #TODO
-        return node
+    def node(self, lane):
+        # Get end node of lane
+        edges = list(self.skeleton_graph.G.edges(data=True))
+        edge_data = [edge for edge in edges if edge[2]['lane'] == lane]
+        return edge_data[0][1]
