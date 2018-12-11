@@ -11,3 +11,6 @@ out/
 /cfg/*.py
 
 CATKIN_IGNORE
+
+.idea/
+.vscode/
