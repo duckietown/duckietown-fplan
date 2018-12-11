@@ -10,7 +10,9 @@
     </node> 
 
     <node pkg="flock_planner" name="flock_planner_node" 
-        type="flock_planner_node.py" output="screen" /> 
+        type="flock_planner_node.py" output="screen">
+        <param name="map_name" value="$(arg map_name)"/>
+    </node> 
 
     <include file="$(find flock_simulator)/launch/visualization.launch">
         <arg name="map_name" value="$(arg map_name)"/>

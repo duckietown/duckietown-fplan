@@ -52,11 +52,18 @@ class FlockSimulatorNode(object):
     def getCommands(self, msg):
         commands = {}
         for command in msg.duckie_commands:
-            commands[command.duckie_id.data] = {
-                'linear': command.command.linear.x,
-                'angular': command.command.angular.z,
-                'on_rails': command.on_rails.data
-            }
+            on_rails = command.on_rails.data
+            if on_rails:
+                commands[command.duckie_id.data] = {
+                    'goal_node': command.node_command.data,
+                    'on_rails': on_rails
+                }
+            else:
+                commands[command.duckie_id.data] = {
+                    'linear': command.velocity_command.linear.x,
+                    'angular': command.velocity_command.angular.z,
+                    'on_rails': on_rails
+                }
         return commands
 
     def generateFlockStateMsg(self, duckies):
@@ -66,7 +73,8 @@ class FlockSimulatorNode(object):
             duckie = duckies[duckie_id]
             duckiestate_msg = DuckieState()
             duckiestate_msg.duckie_id = String(data=duckie_id)
-            duckiestate_msg.on_service = Bool(data=duckie['on_service'])
+            duckiestate_msg.status = Bool(data=duckie['status'])
+            duckiestate_msg.lane = String(data=duckie['next_point']['lane'])
             duckiestate_msg.pose = Pose2D(
                 x=duckie['pose'].p[0] * self.state_manager.map.tile_size,
                 y=duckie['pose'].p[1] * self.state_manager.map.tile_size,
@@ -74,7 +82,6 @@ class FlockSimulatorNode(object):
             duckiestate_msg.velocity = Twist(
                 linear=Vector3(duckie['velocity']['linear'], 0, 0),
                 angular=Vector3(0, 0, duckie['velocity']['angular']))
-
             duckiestate_msg.in_fov = [
                 String(data=visible_duckie)
                 for visible_duckie in duckie['in_fov']

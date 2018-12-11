@@ -33,14 +33,12 @@ class StateManager(object):
                 command = commands[duckie_id]
                 self.duckies[duckie_id]['next_point'] = None
             else:
-                command = duckie_dynamics.getRandomCommand(
-                    self.duckies, duckie, self.stop_distance,
-                    self.duckiebot_length, self.max_vel, self.map.tile_size,
-                    self.skeleton_graph, dt)
+                command = None
 
             # Update duckie's state
             duckies_update[duckie_id] = duckie_dynamics.updateDuckie(
-                self.duckies, duckie, command, self.skeleton_graph,
+                self.duckies, duckie, command, self.stop_distance,
+                self.duckiebot_length, self.max_vel, self.skeleton_graph,
                 self.map.tile_size, dt)
 
             # Print duckie's pose
