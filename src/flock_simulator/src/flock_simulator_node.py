@@ -73,7 +73,7 @@ class FlockSimulatorNode(object):
             duckie = duckies[duckie_id]
             duckiestate_msg = DuckieState()
             duckiestate_msg.duckie_id = String(data=duckie_id)
-            duckiestate_msg.status = Bool(data=duckie['status'])
+            duckiestate_msg.status = String(data=duckie['status'])
             duckiestate_msg.lane = String(data=duckie['next_point']['lane'])
             duckiestate_msg.pose = Pose2D(
                 x=duckie['pose'].p[0] * self.state_manager.map.tile_size,
