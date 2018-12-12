@@ -3,6 +3,7 @@
 import networkx as nx
 from flock_simulator.msg import FlockState, FlockCommand
 
+
 # TODO Implement duckie initial(t=0) status = 'IDLE'
 
 
@@ -47,82 +48,75 @@ class Dispatcher(object):
             if not request['duckie_id']:
                 open_requests.update(request)
 
-        # Update duckiestatus
-        for duckie in duckies:
+        # check if there are requests
+        if open_requests:
 
-            #check if there are requests
-            if not open_requests:
-                break
+            # Update duckiestatus
+            for duckie in duckies:
 
-            # base stuff
-            lane = duckie['lane']  # Lane the duckie is currently on
-            current_node = self.node(duckie['lane'])  # Node the duckie is heading to
-            duckie_status = duckie['status'] # Status of the duckie
+                # base stuff
+                lane = duckie['lane']  # Lane the duckie is currently on
+                current_node = self.node(duckie['lane'])  # Node the duckie is heading to
+                duckie_status = duckie['status']  # Status of the duckie
 
-            # IDLE
-            if duckie_status == 'IDLE':
+                # IDLE
+                if duckie_status == 'IDLE':
 
-                # find closest open request
-                closest_request = next(iter(open_requests), None)
-                for open_request in open_requests:
-                    if self.dist(current_node, open_request) < self.dist(
-                            current_node, closest_request):
-                        closest_request = open_request
+                    # find closest open request
+                    closest_request = next(iter(open_requests), None)
+                    for open_request in open_requests:
+                        if self.dist(current_node, open_request) < self.dist(
+                                    current_node, closest_request):
+                            closest_request = open_request
 
-                start_node = closest_request['start_node']
-                end_node = closest_request['end_node']
+                    start_node = closest_request['start_node']
+                    end_node = closest_request['end_node']
 
-                # pick up customer
-                if start_node == current_node:
-                    # change status AND assign open_request
-                    duckie['status'] = 'WITH_CUSTOMER'
-                    target_location = end_node  # put to duckietarget location
-                    closest_request['duckie_id'] = duckie # assign duckie_id to request
+                    # pick up customer
+                    if start_node == current_node:
+                        # change status AND assign open_request
+                        duckie['status'] = 'WITH_CUSTOMER'
+                        target_location = end_node  # put to duckietarget location
+                        closest_request['duckie_id'] = duckie  # assign duckie_id to request
 
-                # going to customer pickup c
-                elif start_node != current_node:
-                    duckie['status'] = 'GOING_TO_COSTUMER'
-                    target_location = start_node  # put to duckietarget location
-                    closest_request['duckie_id'] = duckie #TODO CHECK assign duckie_id to request
+                    # going to customer pickup c
+                    elif start_node != current_node:
+                        duckie['status'] = 'GOING_TO_COSTUMER'
+                        target_location = start_node  # put to duckietarget location
+                        closest_request['duckie_id'] = duckie  # TODO CHECK assign duckie_id to request
 
-                # REBALANCE no more requests
-                else:
-                    duckie['status'] = 'IDLE'
-                    target_location = end_node  # stay
+                    # REBALANCE no more requests
+                    else:
+                        duckie['status'] = 'IDLE'
+                        target_location = end_node  # stay
 
-            # WITH CUSTOMER
-            elif duckie_status == 'WITH_COSTUMER':
+                # WITH CUSTOMER
+                elif duckie_status == 'WITH_COSTUMER':
 
-                # endlocation reached, request fullfilled
-                request = requests['duckie_id'](duckie)  #todo correct
-                if current_node == request['end_loc']:
-                    duckie['status'] = 'IDLE'
-                    target_location = current_node  # stay
+                    # endlocation reached, request fullfilled
+                    request = requests['duckie_id'](duckie)  # todo correct
+                    if current_node == request['end_loc']:
+                        duckie['status'] = 'IDLE'
+                        target_location = current_node  # stay
 
-            # GOING TO CUSTOMER
-            elif duckie_status == 'GOING_TO_CUSTOMER':
+                # GOING TO CUSTOMER
+                elif duckie_status == 'GOING_TO_CUSTOMER':
 
-                # pick up customer
-                request = requests['duckie_id'](duckie) #todo correct
-                if current_node == request['start_loc']:
-                    # change status AND assign open_request
-                    duckie['status'] = 'WITH_CUSTOMER'
-                    target_location = end_node  # put to duckietarget location
-                    closest_request['duckie_id'] = duckie # assign duckie_id to request
+                    # pick up customer
+                    request = requests['duckie_id'](duckie)  # todo correct
+                    if current_node == request['start_loc']:
+                        # change status AND assign open_request
+                        duckie['status'] = 'WITH_CUSTOMER'
+                        target_location = end_node  # put to duckietarget location
+                        closest_request['duckie_id'] = duckie  # assign duckie_id to request
 
-            # generate path and assign
-            path_pair = self.generatePathPair(duckie, current_node, target_location)
-            paths.append(path_pair)
-
-        # update duckie
-        #TODO
-
-        # update requests
-        #TODO
-
-        #update state
-        state['duckies'] = duckies
-        state['requests'] = requests
+                # generate path and assign
+                path_pair = self.generatePathPair(duckie, current_node, target_location)
+                paths.append(path_pair)
+        else:
+            for duckie in duckies:
+                paths.append(self.generatePathPair(duckie, self.node(duckie['lane']),
+                                                   self.node(duckie['lane'])))
 
         # delete open_requests list
         del open_requests

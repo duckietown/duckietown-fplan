@@ -45,7 +45,7 @@ class FlockPlannerNode(object):
 
         # Update state
         self.isUpdating = True
-        # self.dispatcher.update(self.state)
+        self.dispatcher.update(self.state)
         self.isUpdating = False
 
         # Publish
