@@ -33,7 +33,7 @@ jobs:
           name: Install deps
           command: |
             echo PATH=$PATH
-            pip install -q --user --upgrade -r requirements.txt
+            pip install -q --user --upgrade -r requirements/dev.txt
 
       - run:
           name: List deps
