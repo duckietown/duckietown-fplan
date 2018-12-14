@@ -1,4 +1,5 @@
 import random
+import time
 import utils
 import numpy as np
 import traffic_rules as tr
@@ -225,17 +226,14 @@ def lane_distance(duckies, duckie_id, skeleton_graph):
 
 def genRequest(n_requests, skeleton_graph):
     requests = []
-    nodes = skeleton_graph.G.nodes()
-    size = len(nodes)
-    a = random.randint(0,size)
-    b = random.randint(0,size)
-    for node in nodes:
-        print node
     for i in range(n_requests+1):
         request = {}
-        request['time'] =  i*10
-        request['start_node'] = nodes.get(a)
-        request['end_node'] = nodes.get(b)
+        request['start_time'] = time.time()
+        request['start_node'] = random.choice(list(skeleton_graph.G.nodes()))
+        request['end_node'] = random.choice(list(skeleton_graph.G.nodes()))
         requests.append(request)
+
+    for request in requests:
+        print request
 
     return requests
