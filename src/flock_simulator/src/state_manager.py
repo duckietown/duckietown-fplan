@@ -8,6 +8,7 @@ import duckietown_world as dw
 class StateManager(object):
     def __init__(self, map_name, n_duckies, n_requests):
         # Parameters
+        self.n_requests = n_requests # Number of requests
         self.n_duckies = n_duckies  # Number of duckies
         self.fov = [2.0 / 3.0 * np.pi,
                     2.0]  # Field of view (angle, distance in tiles)
@@ -49,8 +50,7 @@ class StateManager(object):
             print('%s: [%f, %f], %f' %
                   (duckie_id, duckies_update[duckie_id]['pose'].p[0],
                    duckies_update[duckie_id]['pose'].p[1],
-                   duckies_update[duckie_id]['pose'].theta,
-                   ))
+                   duckies_update[duckie_id]['pose'].theta))
 
         # Update what every duckiebot sees
         for duckie_id in self.duckies:

@@ -3,7 +3,6 @@
 import rospy
 import tf
 import state_manager
-import request_generator
 from std_msgs.msg import String, Bool, Int8
 from geometry_msgs.msg import Pose2D, Twist, Vector3
 from flock_simulator.msg import FlockState, FlockCommand, DuckieState
@@ -112,7 +111,8 @@ if __name__ == '__main__':
     rospy.init_node('flock_simulator_node', anonymous=False)
     map_name = rospy.get_param('~map_name')
     n_duckies = rospy.get_param('~n_duckies')
+    n_requests = rospy.get_param('~n_requests')
     transform_broadcaster = tf.TransformBroadcaster()
-    flock_simulator_node = FlockSimulatorNode(map_name, n_duckies)
+    flock_simulator_node = FlockSimulatorNode(map_name, n_duckies, n_requests)
     rospy.on_shutdown(flock_simulator_node.onShutdown)
     rospy.spin()
