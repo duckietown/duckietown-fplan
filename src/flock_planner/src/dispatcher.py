@@ -58,6 +58,7 @@ class Dispatcher(object):
                 lane = duckie['lane']  # Lane the duckie is currently on
                 current_node = self.node(duckie['lane'])  # Node the duckie is heading to
                 duckie_status = duckie['status']  # Status of the duckie
+                target_location = current_node
 
                 # IDLE
                 if duckie_status == 'IDLE':
