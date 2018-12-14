@@ -3,16 +3,17 @@
 import rospy
 import tf
 import state_manager
+import request_generator
 from std_msgs.msg import String, Bool, Int8
 from geometry_msgs.msg import Pose2D, Twist, Vector3
 from flock_simulator.msg import FlockState, FlockCommand, DuckieState
 
 
 class FlockSimulatorNode(object):
-    def __init__(self, map_name, n_duckies):
+    def __init__(self, map_name, n_duckies, n_requests):
         self.node_name = rospy.get_name()
 
-        self.state_manager = state_manager.StateManager(map_name, n_duckies)
+        self.state_manager = state_manager.StateManager(map_name, n_duckies, n_requests)
 
         # Subscribers
         self.sub_paths = rospy.Subscriber(

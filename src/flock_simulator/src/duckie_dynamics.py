@@ -3,6 +3,7 @@ import utils
 import numpy as np
 import traffic_rules as tr
 import duckietown_world as dw
+from random import choice
 
 
 def getCommandFromPoints(duckies, duckie, stop_distance, duckiebot_length,
@@ -103,6 +104,7 @@ def spawnDuckies(n, skeleton_graph):
                     'pose': pose
                 })
                 duckies['duckie-%d' % i] = {
+                    'duckie_id' : i,
                     'pose': pose,
                     'velocity': {
                         'linear': 0,
@@ -221,3 +223,14 @@ def lane_distance(duckies, duckie_id, skeleton_graph):
             min_dist = dist
 
     return min_dist > lane_width / 2
+
+def genRequest(n_requests, skeleton_graph):
+    requests = []
+    for i in range(n_requests+1):
+        request = {}
+        request['time'] =  i*10
+        request['start_node'] = choice(skeleton_graph.nodes())
+        request['end_node'] = choice(skeleton_graph.nodes())
+        requests.append(request)
+
+    return requests
