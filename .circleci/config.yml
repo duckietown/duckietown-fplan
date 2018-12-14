@@ -30,6 +30,13 @@ jobs:
             ssh git@github.com git-lfs-authenticate "${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}" download
             git lfs pull
       - run:
+          name: Install duckietown-world
+          command: |
+            git clone --recursive https://github.com/duckietown/duckietown-world.git
+            cd duckietown-world
+            pip install -r requirements.txt
+            python setup.py develop --no-deps
+      - run:
           name: Install deps
           command: |
             echo PATH=$PATH
