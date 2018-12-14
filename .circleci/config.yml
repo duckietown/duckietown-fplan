@@ -1,34 +1,128 @@
 version: 2
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test-3.7
+      - test-3.6
+      - test-3.5
+      - test-2.7
 jobs:
-  build:
+  test-3.6: &test-template
+    environment:
+      COLUMNS: 160
+      # default is /usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      PATH: /root/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     docker:
-      - image: circleci/python:2.7
+      - image: python:3.6
+    working_directory: ~/repo
     steps:
       - checkout
-      - restore_cache:
-          key: deps1-{{ .Branch }}-{{ checksum "requirements/dev.txt" }}
       - run:
-          name: Install project deps in a venv
+          name: Install Git LFS
           command: |
-            python -m venv venv
-            . venv/bin/activate
-            git clone --recursive https://github.com/duckietown/duckietown-world.git
-            cd duckietown-world
-            pip install -r requirements.txt
-            python setup.py develop --no-deps
-            cd ..
-            pip install -r requirements/dev.txt
-      - save_cache:
-          key: deps1-{{ .Branch }}-{{ checksum "requirements/dev.txt" }}
-          paths:
-                  - "venv"
+            curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash
+            apt-get update
+            apt-get install -y git-lfs openssh-client
+            git lfs install
+            mkdir -p ~/.ssh
+            ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+            ssh git@github.com git-lfs-authenticate "${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}" download
+            git lfs pull
       - run:
-              name: Test
-              commmand: |
-                      . venv/bin/activate
-                      python manage.py test
+          name: Install deps
+          command: |
+            echo PATH=$PATH
+            pip install -q --user --upgrade -r requirements.txt
+
+      - run:
+          name: List deps
+          command: |
+            mkdir -p artifacts
+            pip freeze | tee artifacts/pip-freeze.txt
+
+      - run:
+          name: setup.py develop
+          command: |
+            python setup.py develop --prefix ~/.local --no-deps
+
+      - run:
+          name: Run tests
+          command: |
+            make tests-coverage-single-nocontracts
+
+      - run:
+          name: Notebooks
+          command: |
+            make -C notebooks || true
+
+      - run:
+          name: Example draw maps
+          command: |
+            make tests-maps-coverage
+
+#      - run:
+#          name: Example LFV download
+#          command: |
+#            rm test-data/LFV.json
+#            wget https://github.com/duckietown/duckietown-world/raw/master18/test-data/LFV.json -O test-data/LFV.json
+
+      - run:
+          name: Example LFV
+          command: |
+            make tests-LFV-coverage
+
+
+      - run:
+          name: Coverage analysis
+          when: always
+          command: |
+            make coverage-report
+
+      - run:
+          name: Coveralls submission
+          when: always
+          command: |
+            make coverage-coveralls
+
+      - run:
+          name: Create JUnit output
+          when: always
+          command: |
+            make junit
+
+      - test-results-store:
+          path: out-comptests/junit
+
       - store_artifacts:
-          path: test-reports/
-          destination: tr1
-      - store_test_results:
-          path: test-reports/
+          path: out-comptests/duckietown_world_tests
+          destination: duckietown_world_tests
+          
+      - store_artifacts:
+          path: artifacts
+          destination: artifacts
+
+      - store_artifacts:
+          path: out_coverage
+          destination: coverage
+
+      - store_artifacts:
+          path: notebooks
+          destination: notebooks
+
+  test-3.5:
+    <<: *test-template
+    docker:
+      - image: python:3.5
+  test-2.7:
+    <<: *test-template
+    docker:
+    - image: python:2.7
+  test-3.7:
+    <<: *test-template
+    docker:
+    - image: python:3.7
+  test-circle-2.7:
+    <<: *test-template
+    docker:
+    - image: circle/python
