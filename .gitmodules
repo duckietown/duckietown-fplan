@@ -1,4 +1,4 @@
 [submodule "src/duckietown-visualization"]
 	path = src/duckietown-visualization
 	url = https://github.com/duckietown/duckietown-visualization
-	branch = visualization-fplan
+	branch = master
