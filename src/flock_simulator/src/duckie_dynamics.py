@@ -223,17 +223,3 @@ def lane_distance(duckies, duckie_id, skeleton_graph):
             min_dist = dist
 
     return min_dist > lane_width / 2
-
-def genRequest(n_requests, skeleton_graph):
-    requests = []
-    for i in range(n_requests+1):
-        request = {}
-        request['start_time'] = time.time()
-        request['start_node'] = random.choice(list(skeleton_graph.G.nodes()))
-        request['end_node'] = random.choice(list(skeleton_graph.G.nodes()))
-        requests.append(request)
-
-    for request in requests:
-        print request
-
-    return requests

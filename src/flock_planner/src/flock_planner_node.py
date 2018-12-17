@@ -18,7 +18,7 @@ class FlockPlannerNode(object):
 
         # Dispatcher
         self.dispatcher = dispatcher.Dispatcher(self.skeleton_graph)
-        self.state = {'duckies': {}, 'requests': []}
+        self.state = {'seq': 0, 'duckies': {}, 'requests': []}
 
         # Subscribers
         self.sub_paths = rospy.Subscriber(
@@ -65,20 +65,21 @@ class FlockPlannerNode(object):
         return msg
 
     def getStateFromMessage(self, msg):
-        self.state = {'duckies': {}, 'requests': []}
+        state = {'seq': msg.header.seq, 'duckies': {}, 'requests': []}
         for duckie in msg.duckie_states:
-            self.state['duckies'][duckie.duckie_id.data] = {
+            state['duckies'][duckie.duckie_id.data] = {
                 'status': duckie.status.data,
                 'lane': duckie.lane.data
             }
-        for request in msg.open_requests:
+        for request in msg.requests:
             req = {
                 'time': request.start_time.data,
                 'duckie_id': request.duckie_id.data,
                 'start_node': request.start_node.data,
                 'end_node': request.end_node.data
             }
-            self.state['requests'].append(req)
+            state['requests'].append(req)
+        return state
 
     def onShutdown(self):
         rospy.loginfo('[%s] Shutdown.' % (self.node_name))
