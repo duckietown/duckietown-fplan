@@ -1,0 +1,34 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/python:2.7
+    steps:
+      - checkout
+      - restore_cache:
+          key: deps1-{{ .Branch }}-{{ checksum "requirements/dev.txt" }}
+      - run:
+          name: Install project deps in a venv
+          command: |
+            python -m venv venv
+            . venv/bin/activate
+            git clone --recursive https://github.com/duckietown/duckietown-world.git
+            cd duckietown-world
+            pip install -r requirements.txt
+            python setup.py develop --no-deps
+            cd ..
+            pip install -r requirements/dev.txt
+      - save_cache:
+          key: deps1-{{ .Branch }}-{{ checksum "requirements/dev.txt" }}
+          paths:
+                  - "venv"
+      - run:
+              name: Test
+              commmand: |
+                      . venv/bin/activate
+                      python manage.py test
+      - store_artifacts:
+          path: test-reports/
+          destination: tr1
+      - store_test_results:
+          path: test-reports/

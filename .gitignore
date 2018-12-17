@@ -10,6 +10,10 @@ out/
 *cfgc
 /cfg/*.py
 
+#files changed after catkin_make
+/src/CMakeLists.txt
+/src/duckietown-visualization
+
 CATKIN_IGNORE
 
 .idea/
