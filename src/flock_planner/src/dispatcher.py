@@ -51,71 +51,32 @@ class Dispatcher(object):
 
             # Update duckiestatus
             for duckie_id in duckies:
-                duckie = duckies[duckie_id]
+                if not open_requests:
+                    break
 
-                # base stuff
+                duckie = duckies[duckie_id]
+                if duckie['status'] != 'IDLE':
+                    continue
+
                 current_node = self.node(
                     duckie['lane'])  # Node the duckie is heading to
-                duckie_status = duckie['status']  # Status of the duckie
-                target_location = current_node
 
-                # IDLE
-                if duckie_status == 'IDLE':
+                # find closest open request
+                closest_request = next(iter(open_requests), None)
+                request_index = 0
+                closest_request_index = 0
+                for open_request in open_requests:
+                    if self.dist(current_node, open_request) < self.dist(
+                            current_node, closest_request):
+                        closest_request = open_request
+                        closest_request_index = request_index
+                    request_index += 1
 
-                    # find closest open request
-                    closest_request = next(iter(open_requests), None)
-                    for open_request in open_requests:
-                        if self.dist(current_node, open_request) < self.dist(
-                                current_node, closest_request):
-                            closest_request = open_request
-
-                    start_node = closest_request['start_node']
-                    end_node = closest_request['end_node']
-
-                    # pick up customer
-                    if start_node == current_node:
-                        # change status AND assign open_request
-                        duckie['status'] = 'WITH_CUSTOMER'
-                        target_location = end_node  # put to duckietarget location
-                        closest_request[
-                            'duckie_id'] = duckie  # assign duckie_id to request
-
-                    # going to customer pickup c
-                    elif start_node != current_node:
-                        duckie['status'] = 'GOING_TO_COSTUMER'
-                        target_location = start_node  # put to duckietarget location
-                        closest_request[
-                            'duckie_id'] = duckie  # TODO CHECK assign duckie_id to request
-
-                    # REBALANCE no more requests
-                    else:
-                        duckie['status'] = 'IDLE'
-                        target_location = end_node  # stay
-
-                # WITH CUSTOMER
-                elif duckie_status == 'WITH_COSTUMER':
-
-                    # endlocation reached, request fullfilled
-                    request = requests['duckie_id'](duckie)  # todo correct
-                    if current_node == request['end_loc']:
-                        duckie['status'] = 'IDLE'
-                        target_location = current_node  # stay
-
-                # GOING TO CUSTOMER
-                elif duckie_status == 'GOING_TO_CUSTOMER':
-
-                    # pick up customer
-                    request = requests['duckie_id'](duckie)  # todo correct
-                    if current_node == request['start_loc']:
-                        # change status AND assign open_request
-                        duckie['status'] = 'WITH_CUSTOMER'
-                        target_location = end_node  # put to duckietarget location
-                        closest_request[
-                            'duckie_id'] = duckie  # assign duckie_id to request
+                start_node = closest_request['start_node']
 
                 # generate path and assign
-                path_pair = self.generatePathPair(duckie_id, current_node,
-                                                  target_location)
+                path_pair = self.generatePathPair(
+                    duckie_id, closest_request_index, current_node, start_node)
                 paths.append(path_pair)
 
         # generateCommands from path
@@ -123,10 +84,12 @@ class Dispatcher(object):
         # paths = [
         #   {
         #       'duckie_id': 'duckie-0',
+        #       'request_index': 2,
         #       'path': [list of nodes]
         #   },
         #   {
         #       'duckie_id': 'duckie-1',
+        #       'request_index': 0,
         #       'path': [list of nodes]
         #   }, ...
         # ]
@@ -138,9 +101,10 @@ class Dispatcher(object):
         for path in paths:
             command = {
                 'duckie_id': path['duckie_id'],
+                'request_index': path['request_index'],
                 'goal_node': path['path'][0]
             }
-            self.commands.append(command)
+            commands.append(command)
         return commands
 
     def getClosestRequest(self, open_requests, node):
@@ -160,9 +124,11 @@ class Dispatcher(object):
                                        request['start_node'])
 
     # generate dijkstra_path
-    def generatePathPair(self, duckie_id, current_node, goal_node):
+    def generatePathPair(self, duckie_id, request_index, current_node,
+                         goal_node):
         path = {}
         path['duckie_id'] = duckie_id
+        path['request_index'] = request_index
         path['path'] = nx.dijkstra_path(self.skeleton_graph.G, current_node,
                                         goal_node)
         return path

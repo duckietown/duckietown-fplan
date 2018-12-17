@@ -41,7 +41,6 @@ class StateManager(object):
             # Use commands if received, otherwise drive around randomly
             if duckie_id in commands:
                 command = commands[duckie_id]
-                self.duckies[duckie_id]['next_point'] = None
             else:
                 command = None
 

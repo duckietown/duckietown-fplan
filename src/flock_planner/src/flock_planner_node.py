@@ -3,7 +3,7 @@
 import rospy
 import dispatcher
 import duckietown_world as dw
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Bool, UInt32
 from geometry_msgs.msg import Pose2D
 from flock_simulator.msg import FlockState, FlockCommand, DuckieCommand
 
@@ -59,7 +59,8 @@ class FlockPlannerNode(object):
         for command in commands:
             command_msg = DuckieCommand()
             command_msg.duckie_id = String(data=command['duckie_id'])
-            command_msg.node_command = command['goal_node']
+            command_msg.request_index = UInt32(data=command['request_index'])
+            command_msg.node_command = String(data=command['goal_node'])
             command_msg.on_rails = Bool(data=True)
             msg.duckie_commands.append(command_msg)
         return msg
