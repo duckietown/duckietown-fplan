@@ -6,6 +6,8 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /Duckiebots1
+        - /Duckiebots1/Namespaces1
       Splitter Ratio: 0.5
     Tree Height: 676
   - Class: rviz/Selection
@@ -31,24 +33,6 @@ Panels:
 Visualization Manager:
   Class: ""
   Displays:
-    - Alpha: 0.5
-      Cell Size: 0.584999979
-      Class: rviz/Grid
-      Color: 160; 160; 164
-      Enabled: false
-      Line Style:
-        Line Width: 0.0299999993
-        Value: Lines
-      Name: Grid
-      Normal Cell Count: 0
-      Offset:
-        X: 0
-        Y: 0
-        Z: 0
-      Plane: XY
-      Plane Cell Count: 10
-      Reference Frame: <Fixed Frame>
-      Value: false
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /duckietown_map
@@ -57,13 +41,6 @@ Visualization Manager:
         tiles: true
       Queue Size: 100
       Value: true
-    - Class: rviz/Axes
-      Enabled: false
-      Length: 1
-      Name: Map Origin
-      Radius: 0.100000001
-      Reference Frame: map
-      Value: false
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /duckiebots_markers
@@ -72,13 +49,6 @@ Visualization Manager:
         duckiebots: true
       Queue Size: 100
       Value: true
-    - Class: rviz/Axes
-      Enabled: false
-      Length: 1
-      Name: Duckiebot link
-      Radius: 0.100000001
-      Reference Frame: duckiebot_link
-      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

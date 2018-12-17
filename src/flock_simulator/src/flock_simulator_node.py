@@ -50,7 +50,7 @@ class FlockSimulatorNode(object):
         self.msg_state = self.generateFlockStateMsg(
             self.state_manager.duckies, self.state_manager.requests)
         self.pub_state.publish(self.msg_state)
-        self.publishTf(self.state_manager.duckies)
+        self.publishTf()
 
     def getCommands(self, msg):
         commands = {}
@@ -103,10 +103,13 @@ class FlockSimulatorNode(object):
             msg.duckie_states.append(duckiestate_msg)
         return msg
 
-    def publishTf(self, duckies):
+    def publishTf(self):
+        duckies = self.state_manager.duckies
+        requests = self.state_manager.requests
+        stamp = rospy.Time.now()
+
         for duckie_id in duckies:
             duckie = duckies[duckie_id]
-            stamp = rospy.Time.now()
             theta = duckie['pose'].theta
             x = duckie['pose'].p[0] * self.state_manager.map.tile_size
             y = duckie['pose'].p[1] * self.state_manager.map.tile_size
@@ -114,6 +117,29 @@ class FlockSimulatorNode(object):
             transform_broadcaster.sendTransform((x, y, 0), \
                 tf.transformations.quaternion_from_euler(0, 0, theta), \
                 stamp, duckie_id, "duckiebot_link")
+
+        request_counter = 0
+        for request in requests:
+            pos_start = list(
+                self.state_manager.skeleton_graph.G.nodes(
+                    data=True)[request['start_node']]['point'].p)
+            pos_start[0] = pos_start[0] * self.state_manager.map.tile_size
+            pos_start[1] = pos_start[1] * self.state_manager.map.tile_size
+            pos_end = list(
+                self.state_manager.skeleton_graph.G.nodes(
+                    data=True)[request['end_node']]['point'].p)
+            pos_end[0] = pos_end[0] * self.state_manager.map.tile_size
+            pos_end[1] = pos_end[1] * self.state_manager.map.tile_size
+
+            transform_broadcaster.sendTransform((pos_start[0], pos_start[1], 0), \
+                tf.transformations.quaternion_from_euler(0, 0, 0), \
+                stamp, 'request-start-%d' % request_counter, "request_link")
+
+            transform_broadcaster.sendTransform((pos_end[0], pos_end[1], 0), \
+                tf.transformations.quaternion_from_euler(0, 0, 0), \
+                stamp, 'request-end-%d' % request_counter, "request_link")
+
+            request_counter += 1
 
     def onShutdown(self):
         rospy.loginfo('[%s] Shutdown.' % (self.node_name))

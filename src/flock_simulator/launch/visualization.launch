@@ -15,4 +15,9 @@
         type="static_transform_publisher"
         name="map_to_duckiebot_link_broadcaster"
         args="0 0 0 0 0 0 map duckiebot_link 10" />
+
+    <node pkg="tf"
+        type="static_transform_publisher"
+        name="map_to_request_link_broadcaster"
+        args="0 0 0 0 0 0 map request_link 10" />
 </launch>
