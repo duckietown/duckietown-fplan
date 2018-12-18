@@ -99,6 +99,8 @@ class StateManager(object):
             request = self.genRequest()
             self.requests[request_id] = request
             self.t_last_request = self.timestep
+            print('New request added. Current open requests: %s' % list(
+                self.requests))
 
         self.timestep += 1
 
@@ -152,7 +154,6 @@ class StateManager(object):
                 if dist * self.map.tile_size < self.duckiebot_length:
                     print('%s has been dropped off.' % request_id)
                     self.filled_requests[request_id] = request
-                    print(self.filled_requests[request_id])
                     del requests[request_id]
                     self.duckies[duckie_id]['status'] = 'IDLE'
         self.requests = requests.copy()
