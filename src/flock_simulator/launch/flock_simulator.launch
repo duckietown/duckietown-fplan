@@ -1,14 +1,20 @@
 <launch>
+    <!-- Map name -->
     <arg name="map_name" default="4way"/>
+
+    <!-- Number of duckies -->
     <arg name="n_duckies" default="3"/>
-    <arg name="n_requests" default="6"/>
+
+    <!-- Seconds between requests -->
+    <arg name="t_requests" default="20"/>
+    
     <arg name="rviz_config" default="$(find flock_simulator)/config/$(arg map_name).rviz"/>
 
     <node pkg="flock_simulator" name="flock_simulator_node" 
     type="flock_simulator_node.py" output="screen">
         <param name="map_name" value="$(arg map_name)"/>
         <param name="n_duckies" value="$(arg n_duckies)"/>
-        <param name="n_requests" value="$(arg n_requests)"/>
+        <param name="t_requests" value="$(arg t_requests)"/>
     </node>
 
     <node pkg="flock_planner" name="flock_planner_node" 

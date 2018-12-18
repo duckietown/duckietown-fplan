@@ -1,14 +1,15 @@
 import duckie_dynamics
 import utils
+import random
 import numpy as np
 import networkx as nx
 import duckietown_world as dw
 
 
 class StateManager(object):
-    def __init__(self, map_name, n_duckies, n_requests):
+    def __init__(self, map_name, n_duckies, t_requests):
         # Parameters
-        self.n_requests = n_requests # Number of requests
+        self.t_requests = t_requests  # Seconds between requests
         self.n_duckies = n_duckies  # Number of duckies
         self.fov = [2.0 / 3.0 * np.pi,
                     2.0]  # Field of view (angle, distance in tiles)
@@ -24,9 +25,13 @@ class StateManager(object):
         self.duckies = duckie_dynamics.spawnDuckies(self.n_duckies,
                                                     self.skeleton_graph)
 
-        # Duckie request
-        self.requests = duckie_dynamics.genRequest(self.n_requests,
-                                                   self.skeleton_graph)
+        # Requests
+        self.requests = []
+        self.filled_requests = []
+        self.t_last_request = 0
+
+        # Timestep
+        self.timestep = 0
 
     def updateState(self, commands, dt):
         duckies_update = {}
@@ -36,7 +41,6 @@ class StateManager(object):
             # Use commands if received, otherwise drive around randomly
             if duckie_id in commands:
                 command = commands[duckie_id]
-                self.duckies[duckie_id]['next_point'] = None
             else:
                 command = None
 
@@ -86,3 +90,23 @@ class StateManager(object):
             duckies_update[duckie_id]['collision_level'] = c_level
 
         self.duckies.update(duckies_update)
+
+        # Requests
+        if self.timestep - self.t_last_request > self.t_requests / dt:
+            request = self.genRequest()
+            self.requests.append(request)
+            self.t_last_request = self.timestep
+
+        self.timestep += 1
+
+    def genRequest(self):
+        start_node = random.choice(list(self.skeleton_graph.G.nodes()))
+        end_node = start_node
+        while end_node == start_node:
+            end_node = random.choice(list(self.skeleton_graph.G.nodes()))
+        return {
+            'timestep': self.timestep,
+            'start_node': start_node,
+            'end_node': end_node,
+            'duckie_id': None
+        }

@@ -3,7 +3,7 @@
 import rospy
 import dispatcher
 import duckietown_world as dw
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Bool, UInt32
 from geometry_msgs.msg import Pose2D
 from flock_simulator.msg import FlockState, FlockCommand, DuckieCommand
 
@@ -18,7 +18,7 @@ class FlockPlannerNode(object):
 
         # Dispatcher
         self.dispatcher = dispatcher.Dispatcher(self.skeleton_graph)
-        self.state = {'duckies_state': [], 'requests': []}
+        self.state = {'seq': 0, 'duckies': {}, 'requests': []}
 
         # Subscribers
         self.sub_paths = rospy.Subscriber(
@@ -59,20 +59,19 @@ class FlockPlannerNode(object):
         for command in commands:
             command_msg = DuckieCommand()
             command_msg.duckie_id = String(data=command['duckie_id'])
-            command_msg.node_command = command['goal_node']
+            command_msg.request_index = UInt32(data=command['request_index'])
+            command_msg.node_command = String(data=command['goal_node'])
             command_msg.on_rails = Bool(data=True)
             msg.duckie_commands.append(command_msg)
         return msg
 
     def getStateFromMessage(self, msg):
-        self.state = {'duckies': [], 'requests': []}
+        state = {'seq': msg.header.seq, 'duckies': {}, 'requests': []}
         for duckie in msg.duckie_states:
-            duck = {
-                'duckie_id': duckie.duckie_id.data,
+            state['duckies'][duckie.duckie_id.data] = {
                 'status': duckie.status.data,
                 'lane': duckie.lane.data
             }
-            self.state['duckies'].append(duck)
         for request in msg.requests:
             req = {
                 'time': request.start_time.data,
@@ -80,7 +79,8 @@ class FlockPlannerNode(object):
                 'start_node': request.start_node.data,
                 'end_node': request.end_node.data
             }
-            self.state['requests'].append(req)
+            state['requests'].append(req)
+        return state
 
     def onShutdown(self):
         rospy.loginfo('[%s] Shutdown.' % (self.node_name))

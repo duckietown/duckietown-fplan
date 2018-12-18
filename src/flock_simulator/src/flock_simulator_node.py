@@ -3,16 +3,18 @@
 import rospy
 import tf
 import state_manager
-from std_msgs.msg import String, Bool, Int8, Time
+import time
+from std_msgs.msg import String, Bool, UInt8, UInt32
 from geometry_msgs.msg import Pose2D, Twist, Vector3
 from flock_simulator.msg import Request, FlockState, FlockCommand, DuckieState
 
 
 class FlockSimulatorNode(object):
-    def __init__(self, map_name, n_duckies, n_requests):
+    def __init__(self, map_name, n_duckies, t_requests):
         self.node_name = rospy.get_name()
 
-        self.state_manager = state_manager.StateManager(map_name, n_duckies, n_requests)
+        self.state_manager = state_manager.StateManager(
+            map_name, n_duckies, t_requests)
 
         # Subscribers
         self.sub_paths = rospy.Subscriber(
@@ -45,9 +47,10 @@ class FlockSimulatorNode(object):
         self.isUpdating = False
 
         # Publish
-        self.msg_state = self.generateFlockStateMsg(self.state_manager.duckies, self.state_manager.requests)
+        self.msg_state = self.generateFlockStateMsg(
+            self.state_manager.duckies, self.state_manager.requests)
         self.pub_state.publish(self.msg_state)
-        self.publishTf(self.state_manager.duckies)
+        self.publishTf()
 
     def getCommands(self, msg):
         commands = {}
@@ -70,10 +73,9 @@ class FlockSimulatorNode(object):
         msg = FlockState()
         msg.header.stamp = rospy.Time.now()
 
-        for request_id in range(0,len(requests)):
-            request = requests[request_id]
+        for request in requests:
             request_msg = Request()
-            request_msg.start_time = Time(data=(rospy.Time.now() + request['start_time']))
+            request_msg.start_time = UInt32(data=request['timestep'])
             request_msg.start_node = String(data=request['start_node'])
             request_msg.end_node = String(data=request['end_node'])
             request_msg.duckie_id = String(data=request['duckie_id'])
@@ -96,15 +98,18 @@ class FlockSimulatorNode(object):
                 String(data=visible_duckie)
                 for visible_duckie in duckie['in_fov']
             ]
-            duckiestate_msg.collision_level = Int8(
+            duckiestate_msg.collision_level = UInt8(
                 data=duckie['collision_level'])
             msg.duckie_states.append(duckiestate_msg)
         return msg
 
-    def publishTf(self, duckies):
+    def publishTf(self):
+        duckies = self.state_manager.duckies
+        requests = self.state_manager.requests
+        stamp = rospy.Time.now()
+
         for duckie_id in duckies:
             duckie = duckies[duckie_id]
-            stamp = rospy.Time.now()
             theta = duckie['pose'].theta
             x = duckie['pose'].p[0] * self.state_manager.map.tile_size
             y = duckie['pose'].p[1] * self.state_manager.map.tile_size
@@ -112,6 +117,29 @@ class FlockSimulatorNode(object):
             transform_broadcaster.sendTransform((x, y, 0), \
                 tf.transformations.quaternion_from_euler(0, 0, theta), \
                 stamp, duckie_id, "duckiebot_link")
+
+        request_counter = 0
+        for request in requests:
+            pos_start = list(
+                self.state_manager.skeleton_graph.G.nodes(
+                    data=True)[request['start_node']]['point'].p)
+            pos_start[0] = pos_start[0] * self.state_manager.map.tile_size
+            pos_start[1] = pos_start[1] * self.state_manager.map.tile_size
+            pos_end = list(
+                self.state_manager.skeleton_graph.G.nodes(
+                    data=True)[request['end_node']]['point'].p)
+            pos_end[0] = pos_end[0] * self.state_manager.map.tile_size
+            pos_end[1] = pos_end[1] * self.state_manager.map.tile_size
+
+            transform_broadcaster.sendTransform((pos_start[0], pos_start[1], 0), \
+                tf.transformations.quaternion_from_euler(0, 0, 0), \
+                stamp, 'request-start-%d' % request_counter, "request_link")
+
+            transform_broadcaster.sendTransform((pos_end[0], pos_end[1], 0), \
+                tf.transformations.quaternion_from_euler(0, 0, 0), \
+                stamp, 'request-end-%d' % request_counter, "request_link")
+
+            request_counter += 1
 
     def onShutdown(self):
         rospy.loginfo('[%s] Shutdown.' % (self.node_name))
@@ -121,8 +149,8 @@ if __name__ == '__main__':
     rospy.init_node('flock_simulator_node', anonymous=False)
     map_name = rospy.get_param('~map_name')
     n_duckies = rospy.get_param('~n_duckies')
-    n_requests = rospy.get_param('~n_requests')
+    t_requests = rospy.get_param('~t_requests')
     transform_broadcaster = tf.TransformBroadcaster()
-    flock_simulator_node = FlockSimulatorNode(map_name, n_duckies, n_requests)
+    flock_simulator_node = FlockSimulatorNode(map_name, n_duckies, t_requests)
     rospy.on_shutdown(flock_simulator_node.onShutdown)
     rospy.spin()
