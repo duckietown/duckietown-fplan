@@ -18,21 +18,21 @@ class FlockPlannerNode(object):
 
         # Dispatcher
         self.dispatcher = dispatcher.Dispatcher(self.skeleton_graph)
-        self.state = {'duckies': {}, 'requests': []}
+        self.state = {'duckies_state': [], 'requests': []}
 
         # Subscribers
         self.sub_paths = rospy.Subscriber(
             '/flock_simulator/state', FlockState, self.cbState, queue_size=1)
-
-        # Publishers
-        self.pub_commands = rospy.Publisher(
-            '/flock_simulator/commands', FlockCommand, queue_size=1)
 
         # Timer
         self.sim_frequency = 30.0  # Frequency of simulation in Hz
         self.request_timer = rospy.Timer(
             rospy.Duration.from_sec(1.0 / self.sim_frequency), self.cbTimer)
         self.isUpdating = False
+
+        # Publishers
+        self.pub_commands = rospy.Publisher(
+            '/flock_simulator/commands', FlockCommand, queue_size=1)
 
     def cbState(self, msg):
         self.state = self.getStateFromMessage(msg)
@@ -65,13 +65,15 @@ class FlockPlannerNode(object):
         return msg
 
     def getStateFromMessage(self, msg):
-        self.state = {'duckies': {}, 'requests': []}
+        self.state = {'duckies': [], 'requests': []}
         for duckie in msg.duckie_states:
-            self.state['duckies'][duckie.duckie_id.data] = {
+            duck = {
+                'duckie_id': duckie.duckie_id.data,
                 'status': duckie.status.data,
                 'lane': duckie.lane.data
             }
-        for request in msg.open_requests:
+            self.state['duckies'].append(duck)
+        for request in msg.requests:
             req = {
                 'time': request.start_time.data,
                 'duckie_id': request.duckie_id.data,

@@ -3,8 +3,7 @@
 import rospy
 import tf
 import state_manager
-import time
-from std_msgs.msg import String, Bool, Int8
+from std_msgs.msg import String, Bool, Int8, Time
 from geometry_msgs.msg import Pose2D, Twist, Vector3
 from flock_simulator.msg import Request, FlockState, FlockCommand, DuckieState
 
@@ -74,7 +73,7 @@ class FlockSimulatorNode(object):
         for request_id in range(0,len(requests)):
             request = requests[request_id]
             request_msg = Request()
-            request_msg.start_time = rospy.Time(time=request['start_time'])
+            request_msg.start_time = Time(data=(rospy.Time.now() + request['start_time']))
             request_msg.start_node = String(data=request['start_node'])
             request_msg.end_node = String(data=request['end_node'])
             request_msg.duckie_id = String(data=request['duckie_id'])

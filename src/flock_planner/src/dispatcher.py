@@ -52,7 +52,8 @@ class Dispatcher(object):
         if open_requests:
 
             # Update duckiestatus
-            for duckie in duckies:
+            for duckie_id in duckies:
+                duckie = state[duckie_id]
 
                 # base stuff
                 lane = duckie['lane']  # Lane the duckie is currently on
