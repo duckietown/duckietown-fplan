@@ -13,7 +13,7 @@ The duckies execute the commands (linear and angular velocity) that are tagged w
 The state is published as an array of `DuckieState`. The following information is contained:
 ```
 duckie_id  # The ID of the duckie
-on_service  # Boolean if a duckie has been picked up and is being dropped off, relevant for fleet planning
+status  # Taxi status of duckie, relevant for fleet planning
 in_fov  # Array of duckie ids that are in its field of view
 collision_level  # 0: no collision, 1: collision with duckiebot, 2: out of lane
 pose  # Duckie's pose

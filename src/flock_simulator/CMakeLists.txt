@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_message_files(
   FILES
+  Request.msg
   FlockState.msg
   FlockCommand.msg
   DuckieState.msg

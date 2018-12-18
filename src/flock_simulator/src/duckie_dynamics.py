@@ -5,8 +5,8 @@ import traffic_rules as tr
 import duckietown_world as dw
 
 
-def getRandomCommand(duckies, duckie, stop_distance, duckiebot_length, max_vel,
-                     tile_size, skeleton_graph, dt):
+def getCommandFromPoints(duckies, duckie, stop_distance, duckiebot_length,
+                         max_vel, skeleton_graph, tile_size, dt):
     # If no next_point, stand still
     if not duckie['next_point']:
         return {'linear': 0, 'angular': 0, 'on_rails': False}
@@ -32,7 +32,7 @@ def getRandomCommand(duckies, duckie, stop_distance, duckiebot_length, max_vel,
     return {'linear': linear, 'angular': angular, 'on_rails': True}
 
 
-def getNextPoint(skeleton_graph, current_pose, current_point):
+def getNextPoint(goal_node, skeleton_graph, current_pose, current_point):
     lane_control_points = skeleton_graph.root2.children[current_point[
         'lane']].control_points
     current_point_pose = current_point['pose']
@@ -52,24 +52,34 @@ def getNextPoint(skeleton_graph, current_pose, current_point):
     # Find random next lane
     node = utils.nodeFromLane(
         list(skeleton_graph.G.edges(data=True)), current_point['lane'])
-    node_next = random.choice(list(skeleton_graph.G.neighbors(node)))
+    node_next = goal_node if goal_node is not None else random.choice(
+        list(skeleton_graph.G.neighbors(node)))
     lane_next = skeleton_graph.G.get_edge_data(node, node_next)[0]['lane']
     pose_next = skeleton_graph.root2.children[lane_next].control_points[0]
 
     return {'lane': lane_next, 'point_index': 0, 'pose': pose_next}
 
 
-def updateDuckie(duckies, duckie, command, skeleton_graph, tile_size, dt):
+def updateDuckie(duckies, duckie, command, stop_distance, duckiebot_length,
+                 max_vel, skeleton_graph, tile_size, dt):
+    if command is None or command['on_rails']:
+        command = getCommandFromPoints(duckies, duckie, stop_distance,
+                                       duckiebot_length, max_vel,
+                                       skeleton_graph, tile_size, dt)
+
     pose_new = commandToPose(duckie['pose'], command, tile_size, dt)
     velocity_new = {'linear': command['linear'], 'angular': command['angular']}
-    next_point_new = getNextPoint(
-        skeleton_graph, pose_new,
-        duckie['next_point']) if duckie['next_point'] else None
+    if duckie['next_point'] and 'goal_node' in command:
+        next_point_new = getNextPoint(command['goal_node'], skeleton_graph,
+                                      pose_new, duckie['next_point'])
+    else:
+        next_point_new = getNextPoint(None, skeleton_graph, pose_new,
+                                      duckie['next_point'])
     return {
         'pose': pose_new,
         'velocity': velocity_new,
         'next_point': next_point_new,
-        'on_service': False
+        'status': duckie['status']
     }
 
 
@@ -87,7 +97,7 @@ def spawnDuckies(n, skeleton_graph):
                             .control_points)))
                 pose = skeleton_graph.root2.children[lane].control_points[
                     point_index]
-                next_point = getNextPoint(skeleton_graph, pose, {
+                next_point = getNextPoint(None, skeleton_graph, pose, {
                     'lane': lane,
                     'point_index': point_index,
                     'pose': pose
@@ -99,7 +109,7 @@ def spawnDuckies(n, skeleton_graph):
                         'angular': 0
                     },
                     'next_point': next_point,
-                    'on_service': False,
+                    'status': 'IDLE',
                     'in_fov': [],
                     'collision_level': 0
                 }
@@ -179,7 +189,7 @@ def putOnRails(pose, v, omega, dt):
 
     pose_new = dw.SE2Transform(position, theta)
 
-    if utils.distance(pose, pose_new) > 2 * d_dist:
+    if utils.distance(pose, pose_new) > 4 * d_dist:
         pose_new = pose
         print('Not able to put duckie on rails.')
 

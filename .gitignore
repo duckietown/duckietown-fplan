@@ -15,3 +15,6 @@ out/
 /src/duckietown-visualization
 
 CATKIN_IGNORE
+
+.idea/
+.vscode/
