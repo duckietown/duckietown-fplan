@@ -78,21 +78,21 @@ class FlockSimulatorNode(object):
         for request_id in requests:
             request = requests[request_id]
             request_msg = Request()
-            request_msg.request_id = String(data=request_id)
-            request_msg.start_time = UInt32(data=request['timestep'])
-            request_msg.start_node = String(data=request['start_node'])
-            request_msg.end_node = String(data=request['end_node'])
-            request_msg.duckie_id = String(data=request['duckie_id'])
+            request_msg.request_id = String(data=request.id)
+            request_msg.start_time = UInt32(data=request.timestep)
+            request_msg.start_node = String(data=request.start_node)
+            request_msg.end_node = String(data=request.end_node)
+            request_msg.duckie_id = String(data=request.duckie_id)
             msg.requests.append(request_msg)
 
         for request_id in filled_requests:
             request = filled_requests[request_id]
             request_msg = Request()
-            request_msg.request_id = String(data=request_id)
-            request_msg.start_time = UInt32(data=request['timestep'])
-            request_msg.start_node = String(data=request['start_node'])
-            request_msg.end_node = String(data=request['end_node'])
-            request_msg.duckie_id = String(data=request['duckie_id'])
+            request_msg.request_id = String(data=request.id)
+            request_msg.start_time = UInt32(data=request.timestep)
+            request_msg.start_node = String(data=request.start_node)
+            request_msg.end_node = String(data=request.end_node)
+            request_msg.duckie_id = String(data=request.duckie_id)
             msg.filled_requests.append(request_msg)
 
         for duckie_id in duckies:
@@ -136,7 +136,7 @@ class FlockSimulatorNode(object):
             request = requests[request_id]
 
             pos_start = self.state_manager.dt_map.nodeToPose(
-                request['start_node']).p.copy()
+                request.start_node).p.copy()
             pos_start[0] = pos_start[0] * self.state_manager.dt_map.tile_size
             pos_start[1] = pos_start[1] * self.state_manager.dt_map.tile_size
             transform_broadcaster.sendTransform((pos_start[0], pos_start[1], 0), \
@@ -144,7 +144,7 @@ class FlockSimulatorNode(object):
                 stamp, '%s-start' % request_id, "request_link")
 
             pos_end = self.state_manager.dt_map.nodeToPose(
-                request['end_node']).p.copy()
+                request.end_node).p.copy()
             pos_end[0] = pos_end[0] * self.state_manager.dt_map.tile_size
             pos_end[1] = pos_end[1] * self.state_manager.dt_map.tile_size
             transform_broadcaster.sendTransform((pos_end[0], pos_end[1], 0), \

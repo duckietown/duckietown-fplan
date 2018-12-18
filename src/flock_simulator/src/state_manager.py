@@ -1,5 +1,6 @@
 import duckie_dynamics
 import duckietown_map
+import request
 import utils
 import random
 import numpy as np
@@ -95,45 +96,33 @@ class StateManager(object):
         if self.timestep - self.t_last_request > self.t_requests / dt:
             request_id = 'request-%d' % (
                 len(self.requests) + len(self.filled_requests))
-            request = self.genRequest()
-            self.requests[request_id] = request
+            self.requests[request_id] = request.Request(
+                request_id, self.dt_map.nodes, self.timestep)
             self.t_last_request = self.timestep
             print('New request added. Current open requests: %s' % list(
                 self.requests))
 
         self.timestep += 1
 
-    def genRequest(self):
-        start_node = random.choice(self.dt_map.nodes)[0]
-        end_node = start_node
-        while end_node == start_node:
-            end_node = random.choice(self.dt_map.nodes)[0]
-        return {
-            'timestep': self.timestep,
-            'start_node': start_node,
-            'end_node': end_node,
-            'duckie_id': None
-        }
-
     def updateRequests(self, commands):
         for duckie_id in commands:
             command = commands[duckie_id]
             if command['request_id']:
                 request_id = command['request_id']
+                request = self.requests[request_id]
                 if (self.duckies[duckie_id]['status'] == 'DRIVINGWITHCUSTOMER'
-                    ) and (self.requests[request_id]['duckie_id'] !=
-                           duckie_id):
+                    ) and (request.duckie_id != duckie_id):
                     print('Cannot reassign duckie driving with customer.')
                     continue
 
                 # Update status
-                pose_start = self.dt_map.nodeToPose(
-                    self.requests[request_id]['start_node'])
+                pose_start = self.dt_map.nodeToPose(request.start_node)
                 dist = utils.distance(self.duckies[duckie_id]['pose'],
                                       pose_start)
                 if dist * self.dt_map.tile_size < self.duckiebot_length:
                     print('%s has been picked up.' % request_id)
-                    self.requests[request_id]['duckie_id'] = duckie_id
+                    request.duckie_id = duckie_id
+                    request.status = 'PICKEDUP'
                     self.duckies[duckie_id]['status'] = 'DRIVINGWITHCUSTOMER'
                 else:
                     self.duckies[duckie_id]['status'] = 'DRIVINGTOCUSTOMER'
@@ -144,13 +133,14 @@ class StateManager(object):
         requests = self.requests.copy()
         for request_id in self.requests:
             request = self.requests[request_id]
-            duckie_id = request['duckie_id']
-            if duckie_id and self.duckies[duckie_id]['status'] == 'DRIVINGWITHCUSTOMER':
-                pose_end = self.dt_map.nodeToPose(request['end_node'])
+            duckie_id = request.duckie_id
+            if request.status == 'PICKEDUP' and self.duckies[duckie_id]['status'] == 'DRIVINGWITHCUSTOMER':
+                pose_end = self.dt_map.nodeToPose(request.end_node)
                 dist = utils.distance(self.duckies[duckie_id]['pose'],
                                       pose_end)
                 if dist * self.dt_map.tile_size < self.duckiebot_length:
                     print('%s has been dropped off.' % request_id)
+                    request.status = 'FILLED'
                     self.filled_requests[request_id] = request
                     del requests[request_id]
                     self.duckies[duckie_id]['status'] = 'IDLE'
