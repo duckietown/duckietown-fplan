@@ -3,16 +3,17 @@ import utils
 import numpy as np
 import traffic_rules as tr
 import duckietown_world as dw
+from duckiebot import Duckiebot
 
 
 def getCommandFromPoints(duckies, duckie, stop_distance, duckiebot_length,
                          max_vel, dt_map, dt):
     # If no next_point, stand still
-    if not duckie['next_point']:
+    if not duckie.next_point:
         return {'linear': 0, 'angular': 0, 'on_rails': False}
 
-    duckie_pose = duckie['pose']
-    point_pose = duckie['next_point']['pose']
+    duckie_pose = duckie.pose
+    point_pose = duckie.next_point['pose']
     ang_diff = utils.limitAngle(point_pose.theta - duckie_pose.theta)
 
     linear = tr.getVelocity(duckies, duckie, stop_distance, duckiebot_length,
@@ -58,26 +59,25 @@ def getNextPoint(goal_node, dt_map, current_pose, current_point):
     return {'lane': lane_next, 'point_index': 0, 'pose': pose_next}
 
 
-def updateDuckie(duckies, duckie, command, stop_distance, duckiebot_length,
+def updateDuckie(duckies, duckie_id, command, stop_distance, duckiebot_length,
                  max_vel, dt_map, dt):
+    duckie = duckies[duckie_id]
     if command is None or command['on_rails']:
         command = getCommandFromPoints(duckies, duckie, stop_distance,
                                        duckiebot_length, max_vel, dt_map, dt)
 
-    pose_new = commandToPose(duckie['pose'], command, dt_map.tile_size, dt)
+    pose_new = commandToPose(duckie.pose, command, dt_map.tile_size, dt)
     velocity_new = {'linear': command['linear'], 'angular': command['angular']}
-    if duckie['next_point'] and 'goal_node' in command:
+    if duckie.next_point and 'goal_node' in command:
         next_point_new = getNextPoint(command['goal_node'], dt_map, pose_new,
-                                      duckie['next_point'])
+                                      duckie.next_point)
     else:
         next_point_new = getNextPoint(None, dt_map, pose_new,
-                                      duckie['next_point'])
-    return {
-        'pose': pose_new,
-        'velocity': velocity_new,
-        'next_point': next_point_new,
-        'status': duckie['status']
-    }
+                                      duckie.next_point)
+
+    duckie.pose = pose_new
+    duckie.velocity = velocity_new
+    duckie.next_point = next_point_new
 
 
 def spawnDuckies(n, dt_map):
@@ -88,25 +88,8 @@ def spawnDuckies(n, dt_map):
         while spawn_is_occupied:
             lane = random.sample(dt_map.lanes, 1)[0]
             if lane not in occupied_lanes:
-                point_index = random.choice(
-                    range(len(dt_map.lanes[lane].control_points)))
-                pose = dt_map.lanes[lane].control_points[point_index]
-                next_point = getNextPoint(None, dt_map, pose, {
-                    'lane': lane,
-                    'point_index': point_index,
-                    'pose': pose
-                })
-                duckies['duckie-%d' % i] = {
-                    'pose': pose,
-                    'velocity': {
-                        'linear': 0,
-                        'angular': 0
-                    },
-                    'next_point': next_point,
-                    'status': 'IDLE',
-                    'in_fov': [],
-                    'collision_level': 0
-                }
+                duckie_id = 'duckie-%d' % i
+                duckies[duckie_id] = Duckiebot(duckie_id, lane, dt_map)
                 spawn_is_occupied = False
                 occupied_lanes.append(lane)
     return duckies
@@ -203,13 +186,13 @@ def isInFront(pose1, pose2, angle):
 def lane_distance(duckies, duckie_id, dt_map):
     # Find the nearest control point and send the relative distance along x axis
     duckie = duckies[duckie_id]
-    lane_control_points = dt_map.lanes[duckie['next_point'][
+    lane_control_points = dt_map.lanes[duckie.next_point[
         'lane']].control_points
-    lane_width = dt_map.lanes[duckie['next_point']['lane']].width
+    lane_width = dt_map.lanes[duckie.next_point['lane']].width
     min_dist = 10000
 
     for cp in lane_control_points:
-        dist = cp.p[0] - duckie['pose'].p[0]
+        dist = cp.p[0] - duckie.pose.p[0]
         if dist < min_dist:
             min_dist = dist
 

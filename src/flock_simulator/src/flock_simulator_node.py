@@ -79,7 +79,8 @@ class FlockSimulatorNode(object):
             request = requests[request_id]
             request_msg = Request()
             request_msg.request_id = String(data=request.id)
-            request_msg.start_time = UInt32(data=request.timestep)
+            request_msg.start_time = UInt32(data=request.start_time)
+            request_msg.pickup_time = UInt32(data=request.pickup_time)
             request_msg.start_node = String(data=request.start_node)
             request_msg.end_node = String(data=request.end_node)
             request_msg.duckie_id = String(data=request.duckie_id)
@@ -89,7 +90,9 @@ class FlockSimulatorNode(object):
             request = filled_requests[request_id]
             request_msg = Request()
             request_msg.request_id = String(data=request.id)
-            request_msg.start_time = UInt32(data=request.timestep)
+            request_msg.start_time = UInt32(data=request.start_time)
+            request_msg.pickup_time = UInt32(data=request.pickup_time)
+            request_msg.end_time = UInt32(data=request.end_time)
             request_msg.start_node = String(data=request.start_node)
             request_msg.end_node = String(data=request.end_node)
             request_msg.duckie_id = String(data=request.duckie_id)
@@ -99,21 +102,20 @@ class FlockSimulatorNode(object):
             duckie = duckies[duckie_id]
             duckiestate_msg = DuckieState()
             duckiestate_msg.duckie_id = String(data=duckie_id)
-            duckiestate_msg.status = String(data=duckie['status'])
-            duckiestate_msg.lane = String(data=duckie['next_point']['lane'])
+            duckiestate_msg.status = String(data=duckie.status)
+            duckiestate_msg.lane = String(data=duckie.next_point['lane'])
             duckiestate_msg.pose = Pose2D(
-                x=duckie['pose'].p[0] * self.state_manager.dt_map.tile_size,
-                y=duckie['pose'].p[1] * self.state_manager.dt_map.tile_size,
-                theta=duckie['pose'].theta)
+                x=duckie.pose.p[0] * self.state_manager.dt_map.tile_size,
+                y=duckie.pose.p[1] * self.state_manager.dt_map.tile_size,
+                theta=duckie.pose.theta)
             duckiestate_msg.velocity = Twist(
-                linear=Vector3(duckie['velocity']['linear'], 0, 0),
-                angular=Vector3(0, 0, duckie['velocity']['angular']))
+                linear=Vector3(duckie.velocity['linear'], 0, 0),
+                angular=Vector3(0, 0, duckie.velocity['angular']))
             duckiestate_msg.in_fov = [
-                String(data=visible_duckie)
-                for visible_duckie in duckie['in_fov']
+                String(data=visible_duckie) for visible_duckie in duckie.in_fov
             ]
             duckiestate_msg.collision_level = UInt8(
-                data=duckie['collision_level'])
+                data=duckie.collision_level)
             msg.duckie_states.append(duckiestate_msg)
         return msg
 
@@ -124,9 +126,9 @@ class FlockSimulatorNode(object):
 
         for duckie_id in duckies:
             duckie = duckies[duckie_id]
-            theta = duckie['pose'].theta
-            x = duckie['pose'].p[0] * self.state_manager.dt_map.tile_size
-            y = duckie['pose'].p[1] * self.state_manager.dt_map.tile_size
+            theta = duckie.pose.theta
+            x = duckie.pose.p[0] * self.state_manager.dt_map.tile_size
+            y = duckie.pose.p[1] * self.state_manager.dt_map.tile_size
 
             transform_broadcaster.sendTransform((x, y, 0), \
                 tf.transformations.quaternion_from_euler(0, 0, theta), \
