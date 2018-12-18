@@ -81,7 +81,7 @@ def updateDuckie(duckies, duckie, command, stop_distance, duckiebot_length,
         'pose': pose_new,
         'velocity': velocity_new,
         'next_point': next_point_new,
-        'status': 'IDLE'
+        'status': duckie['status']
     }
 
 

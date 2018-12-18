@@ -3,7 +3,7 @@
 import rospy
 import dispatcher
 import duckietown_world as dw
-from std_msgs.msg import String, Bool, UInt32
+from std_msgs.msg import String, Bool
 from geometry_msgs.msg import Pose2D
 from flock_simulator.msg import FlockState, FlockCommand, DuckieCommand
 
@@ -59,27 +59,26 @@ class FlockPlannerNode(object):
         for command in commands:
             command_msg = DuckieCommand()
             command_msg.duckie_id = String(data=command['duckie_id'])
-            command_msg.request_index = UInt32(data=command['request_index'])
+            command_msg.request_id = String(data=command['request_id'])
             command_msg.node_command = String(data=command['goal_node'])
             command_msg.on_rails = Bool(data=True)
             msg.duckie_commands.append(command_msg)
         return msg
 
     def getStateFromMessage(self, msg):
-        state = {'seq': msg.header.seq, 'duckies': {}, 'requests': []}
+        state = {'seq': msg.header.seq, 'duckies': {}, 'requests': {}}
         for duckie in msg.duckie_states:
             state['duckies'][duckie.duckie_id.data] = {
                 'status': duckie.status.data,
                 'lane': duckie.lane.data
             }
         for request in msg.requests:
-            req = {
+            state['requests'][request.request_id.data] = {
                 'time': request.start_time.data,
                 'duckie_id': request.duckie_id.data,
                 'start_node': request.start_node.data,
                 'end_node': request.end_node.data
             }
-            state['requests'].append(req)
         return state
 
     def onShutdown(self):

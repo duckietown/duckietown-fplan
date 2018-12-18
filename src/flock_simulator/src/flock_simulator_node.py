@@ -59,7 +59,8 @@ class FlockSimulatorNode(object):
             if on_rails:
                 commands[command.duckie_id.data] = {
                     'goal_node': command.node_command.data,
-                    'on_rails': on_rails
+                    'on_rails': on_rails,
+                    'request_id': command.request_id.data
                 }
             else:
                 commands[command.duckie_id.data] = {
@@ -73,8 +74,10 @@ class FlockSimulatorNode(object):
         msg = FlockState()
         msg.header.stamp = rospy.Time.now()
 
-        for request in requests:
+        for request_id in requests:
+            request = requests[request_id]
             request_msg = Request()
+            request_msg.request_id = String(data=request_id)
             request_msg.start_time = UInt32(data=request['timestep'])
             request_msg.start_node = String(data=request['start_node'])
             request_msg.end_node = String(data=request['end_node'])
@@ -118,28 +121,26 @@ class FlockSimulatorNode(object):
                 tf.transformations.quaternion_from_euler(0, 0, theta), \
                 stamp, duckie_id, "duckiebot_link")
 
-        request_counter = 0
-        for request in requests:
+        for request_id in requests:
+            request = requests[request_id]
+
             pos_start = list(
                 self.state_manager.skeleton_graph.G.nodes(
                     data=True)[request['start_node']]['point'].p)
             pos_start[0] = pos_start[0] * self.state_manager.map.tile_size
             pos_start[1] = pos_start[1] * self.state_manager.map.tile_size
+            transform_broadcaster.sendTransform((pos_start[0], pos_start[1], 0), \
+                tf.transformations.quaternion_from_euler(0, 0, 0), \
+                stamp, '%s-start' % request_id, "request_link")
+
             pos_end = list(
                 self.state_manager.skeleton_graph.G.nodes(
                     data=True)[request['end_node']]['point'].p)
             pos_end[0] = pos_end[0] * self.state_manager.map.tile_size
             pos_end[1] = pos_end[1] * self.state_manager.map.tile_size
-
-            transform_broadcaster.sendTransform((pos_start[0], pos_start[1], 0), \
-                tf.transformations.quaternion_from_euler(0, 0, 0), \
-                stamp, 'request-start-%d' % request_counter, "request_link")
-
             transform_broadcaster.sendTransform((pos_end[0], pos_end[1], 0), \
                 tf.transformations.quaternion_from_euler(0, 0, 0), \
-                stamp, 'request-end-%d' % request_counter, "request_link")
-
-            request_counter += 1
+                stamp, '%s-end' % request_id, "request_link")
 
     def onShutdown(self):
         rospy.loginfo('[%s] Shutdown.' % (self.node_name))
