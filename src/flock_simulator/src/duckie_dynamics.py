@@ -3,7 +3,7 @@ import utils
 import numpy as np
 import traffic_rules as tr
 import duckietown_world as dw
-import rospy
+
 
 def getCommandFromPoints(duckies, duckie, stop_distance, duckiebot_length,
                          max_vel, skeleton_graph, tile_size, dt):
@@ -79,7 +79,7 @@ def updateDuckie(duckies, duckie, command, stop_distance, duckiebot_length,
         'pose': pose_new,
         'velocity': velocity_new,
         'next_point': next_point_new,
-        'status': 'IDLE'
+        'status': duckie['status']
     }
 
 
@@ -221,19 +221,3 @@ def lane_distance(duckies, duckie_id, skeleton_graph):
             min_dist = dist
 
     return min_dist > lane_width / 2
-
-def genRequest(n_requests, skeleton_graph):
-    requests = []
-    for i in range(n_requests+1):
-        request = {}
-        request['start_time'] = rospy.Duration(10*i)
-        request['start_node'] = random.choice(list(skeleton_graph.G.nodes()))
-        request['end_node'] = random.choice(list(skeleton_graph.G.nodes()))
-        request['duckie_id'] = ''
-        requests.append(request)
-
-    for request in requests:
-        print request
-
-    return requests
-

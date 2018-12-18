@@ -26,8 +26,8 @@ class StateManager(object):
                                                     self.skeleton_graph)
 
         # Requests
-        self.requests = []
-        self.filled_requests = []
+        self.requests = {}
+        self.filled_requests = {}
         self.t_last_request = 0
 
         # Timestep
@@ -92,9 +92,12 @@ class StateManager(object):
         self.duckies.update(duckies_update)
 
         # Requests
+        self.updateRequests(commands)
         if self.timestep - self.t_last_request > self.t_requests / dt:
+            request_id = 'request-%d' % (
+                len(self.requests) + len(self.filled_requests))
             request = self.genRequest()
-            self.requests.append(request)
+            self.requests[request_id] = request
             self.t_last_request = self.timestep
 
         self.timestep += 1
@@ -110,3 +113,42 @@ class StateManager(object):
             'end_node': end_node,
             'duckie_id': None
         }
+
+    def updateRequests(self, commands):
+        for duckie_id in commands:
+            command = commands[duckie_id]
+            if command['request_id']:
+                request_id = command['request_id']
+                if (self.duckies[duckie_id]['status'] == 'DRIVINGWITHCUSTOMER'
+                    ) and (self.requests[request_id]['duckie_id'] !=
+                           duckie_id):
+                    print('Cannot reassign duckie driving with customer.')
+                    continue
+                self.requests[request_id]['duckie_id'] = duckie_id
+
+                # Update status
+                pose_start = self.skeleton_graph.G.nodes(data=True)[
+                    self.requests[request_id]['start_node']]['point']
+                dist = utils.distance(self.duckies[duckie_id]['pose'],
+                                      pose_start)
+                if dist < self.duckiebot_length:
+                    self.requests[request_id]['duckie_id'] = duckie_id
+                    self.duckies[duckie_id]['status'] == 'DRIVINGWITHCUSTOMER'
+                else:
+                    self.duckies[duckie_id]['status'] = 'DRIVINGTOCUSTOMER'
+            else:
+                self.duckies[duckie_id]['status'] = 'IDLE'
+
+        # Update filled_requests
+        for request_id in self.requests:
+            request = self.requests[request_id]
+            duckie_id = request['duckie_id']
+            if duckie_id and self.duckies[duckie_id]['status'] == 'DRIVINGWITHCUSTOMER':
+                pose_end = self.skeleton_graph.G.nodes(
+                    data=True)[request['end_node']]['point']
+                dist = utils.distance(self.duckies[duckie_id]['pose'],
+                                      pose_end)
+                if dist < self.duckiebot_length:
+                    self.filled_requests[request_id] = request
+                    del self.requests[request_id]
+                    self.duckies[duckie_id]['status'] = 'IDLE'

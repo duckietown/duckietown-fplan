@@ -27,7 +27,7 @@ class Dispatcher(object):
         #       }, ...
         #   ]
         #   'requests': [
-        #       {
+        #       'request-0': {
         #           'time': [time of request],
         #           'duckie_id': [duckie which is serving the request (empty if unassigned)],
         #           'start_node': [start node of graph (networkx)],
@@ -41,10 +41,10 @@ class Dispatcher(object):
         paths = []
 
         # Get open requests
-        open_requests = []
-        for request in requests:
-            if not request['duckie_id']:
-                open_requests.append(request)
+        open_requests = {}
+        for request_id in requests:
+            if not requests[request_id]['duckie_id']:
+                open_requests[request_id] = requests[request_id]
 
         # check if there are requests
         if open_requests:
@@ -62,21 +62,20 @@ class Dispatcher(object):
                     duckie['lane'])  # Node the duckie is heading to
 
                 # find closest open request
-                closest_request = next(iter(open_requests), None)
-                request_index = 0
-                closest_request_index = 0
-                for open_request in open_requests:
+                closest_request_id = next(iter(open_requests), None)
+                closest_request = open_requests[closest_request_id]
+                for open_request_id in open_requests:
+                    open_request = open_requests[open_request_id]
                     if self.dist(current_node, open_request) < self.dist(
                             current_node, closest_request):
                         closest_request = open_request
-                        closest_request_index = request_index
-                    request_index += 1
+                        closest_request_id = open_request_id
 
                 start_node = closest_request['start_node']
 
                 # generate path and assign
                 path_pair = self.generatePathPair(
-                    duckie_id, closest_request_index, current_node, start_node)
+                    duckie_id, closest_request_id, current_node, start_node)
                 paths.append(path_pair)
 
         # generateCommands from path
@@ -101,7 +100,7 @@ class Dispatcher(object):
         for path in paths:
             command = {
                 'duckie_id': path['duckie_id'],
-                'request_index': path['request_index'],
+                'request_id': path['request_id'],
                 'goal_node': path['path'][0]
             }
             commands.append(command)
@@ -124,11 +123,10 @@ class Dispatcher(object):
                                        request['start_node'])
 
     # generate dijkstra_path
-    def generatePathPair(self, duckie_id, request_index, current_node,
-                         goal_node):
+    def generatePathPair(self, duckie_id, request_id, current_node, goal_node):
         path = {}
         path['duckie_id'] = duckie_id
-        path['request_index'] = request_index
+        path['request_id'] = request_id
         path['path'] = nx.dijkstra_path(self.skeleton_graph.G, current_node,
                                         goal_node)
         return path
