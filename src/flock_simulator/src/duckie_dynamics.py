@@ -1,10 +1,8 @@
 import random
-import time
 import utils
 import numpy as np
 import traffic_rules as tr
 import duckietown_world as dw
-import networkx as nx
 
 
 def getCommandFromPoints(duckies, duckie, stop_distance, duckiebot_length,
