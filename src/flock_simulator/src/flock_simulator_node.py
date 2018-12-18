@@ -48,7 +48,8 @@ class FlockSimulatorNode(object):
 
         # Publish
         self.msg_state = self.generateFlockStateMsg(
-            self.state_manager.duckies, self.state_manager.requests)
+            self.state_manager.duckies, self.state_manager.requests,
+            self.state_manager.filled_requests)
         self.pub_state.publish(self.msg_state)
         self.publishTf()
 
@@ -70,7 +71,7 @@ class FlockSimulatorNode(object):
                 }
         return commands
 
-    def generateFlockStateMsg(self, duckies, requests):
+    def generateFlockStateMsg(self, duckies, requests, filled_requests):
         msg = FlockState()
         msg.header.stamp = rospy.Time.now()
 
@@ -83,6 +84,16 @@ class FlockSimulatorNode(object):
             request_msg.end_node = String(data=request['end_node'])
             request_msg.duckie_id = String(data=request['duckie_id'])
             msg.requests.append(request_msg)
+
+        for request_id in filled_requests:
+            request = filled_requests[request_id]
+            request_msg = Request()
+            request_msg.request_id = String(data=request_id)
+            request_msg.start_time = UInt32(data=request['timestep'])
+            request_msg.start_node = String(data=request['start_node'])
+            request_msg.end_node = String(data=request['end_node'])
+            request_msg.duckie_id = String(data=request['duckie_id'])
+            msg.filled_requests.append(request_msg)
 
         for duckie_id in duckies:
             duckie = duckies[duckie_id]

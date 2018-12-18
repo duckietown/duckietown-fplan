@@ -51,10 +51,10 @@ class StateManager(object):
                 self.map.tile_size, dt)
 
             # Print duckie's pose
-            print('%s: [%f, %f], %f' %
-                  (duckie_id, duckies_update[duckie_id]['pose'].p[0],
-                   duckies_update[duckie_id]['pose'].p[1],
-                   duckies_update[duckie_id]['pose'].theta))
+            # print('%s: [%f, %f], %f' %
+            #       (duckie_id, duckies_update[duckie_id]['pose'].p[0],
+            #        duckies_update[duckie_id]['pose'].p[1],
+            #        duckies_update[duckie_id]['pose'].theta))
 
         # Update what every duckiebot sees
         for duckie_id in self.duckies:
@@ -124,22 +124,23 @@ class StateManager(object):
                            duckie_id):
                     print('Cannot reassign duckie driving with customer.')
                     continue
-                self.requests[request_id]['duckie_id'] = duckie_id
 
                 # Update status
                 pose_start = self.skeleton_graph.G.nodes(data=True)[
                     self.requests[request_id]['start_node']]['point']
                 dist = utils.distance(self.duckies[duckie_id]['pose'],
                                       pose_start)
-                if dist < self.duckiebot_length:
+                if dist * self.map.tile_size < self.duckiebot_length:
+                    print('%s has been picked up.' % request_id)
                     self.requests[request_id]['duckie_id'] = duckie_id
-                    self.duckies[duckie_id]['status'] == 'DRIVINGWITHCUSTOMER'
+                    self.duckies[duckie_id]['status'] = 'DRIVINGWITHCUSTOMER'
                 else:
                     self.duckies[duckie_id]['status'] = 'DRIVINGTOCUSTOMER'
             else:
                 self.duckies[duckie_id]['status'] = 'IDLE'
 
         # Update filled_requests
+        requests = self.requests.copy()
         for request_id in self.requests:
             request = self.requests[request_id]
             duckie_id = request['duckie_id']
@@ -148,7 +149,10 @@ class StateManager(object):
                     data=True)[request['end_node']]['point']
                 dist = utils.distance(self.duckies[duckie_id]['pose'],
                                       pose_end)
-                if dist < self.duckiebot_length:
+                if dist * self.map.tile_size < self.duckiebot_length:
+                    print('%s has been dropped off.' % request_id)
                     self.filled_requests[request_id] = request
-                    del self.requests[request_id]
+                    print(self.filled_requests[request_id])
+                    del requests[request_id]
                     self.duckies[duckie_id]['status'] = 'IDLE'
+        self.requests = requests.copy()

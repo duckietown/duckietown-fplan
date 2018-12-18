@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import networkx as nx
+import numpy as np
 from flock_simulator.msg import FlockState, FlockCommand
 
 # TODO Implement duckie initial(t=0) status = 'IDLE'
@@ -48,6 +49,7 @@ class Dispatcher(object):
 
         # check if there are requests
         if open_requests:
+            assigned_requests = []
 
             # Update duckiestatus
             for duckie_id in duckies:
@@ -55,28 +57,32 @@ class Dispatcher(object):
                     break
 
                 duckie = duckies[duckie_id]
-                if duckie['status'] != 'IDLE':
+                if duckie['status'] == 'DRIVINGWITHCUSTOMER':
                     continue
 
                 current_node = self.node(
                     duckie['lane'])  # Node the duckie is heading to
 
                 # find closest open request
-                closest_request_id = next(iter(open_requests), None)
-                closest_request = open_requests[closest_request_id]
+                closest_request_id = None
+                closest_distance = np.inf
                 for open_request_id in open_requests:
                     open_request = open_requests[open_request_id]
-                    if self.dist(current_node, open_request) < self.dist(
-                            current_node, closest_request):
-                        closest_request = open_request
+                    distance = self.dist(current_node, open_request)
+                    if open_request_id not in assigned_requests and distance < closest_distance:
+                        closest_distance = distance
                         closest_request_id = open_request_id
 
-                start_node = closest_request['start_node']
+                if closest_request_id:
+                    closest_request = open_requests[closest_request_id]
+                    start_node = closest_request['start_node']
+                    assigned_requests.append(closest_request_id)
 
-                # generate path and assign
-                path_pair = self.generatePathPair(
-                    duckie_id, closest_request_id, current_node, start_node)
-                paths.append(path_pair)
+                    # generate path and assign
+                    path_pair = self.generatePathPair(duckie_id,
+                                                      closest_request_id,
+                                                      current_node, start_node)
+                    paths.append(path_pair)
 
         # generateCommands from path
         # EXAMPLE FOR PATHS:

@@ -189,7 +189,7 @@ def putOnRails(pose, v, omega, dt):
 
     pose_new = dw.SE2Transform(position, theta)
 
-    if utils.distance(pose, pose_new) > 2 * d_dist:
+    if utils.distance(pose, pose_new) > 4 * d_dist:
         pose_new = pose
         print('Not able to put duckie on rails.')
 
