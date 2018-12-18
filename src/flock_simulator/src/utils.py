@@ -1,11 +1,6 @@
 import numpy as np
 
 
-def nodeFromLane(edges, lane):
-    edge_data = [edge for edge in edges if edge[2]['lane'] == lane]
-    return edge_data[0][1]
-
-
 def distance(pose1, pose2):
     # Distance from poses
     return np.hypot(pose1.p[0] - pose2.p[0], pose1.p[1] - pose2.p[1])

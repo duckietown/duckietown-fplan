@@ -102,8 +102,8 @@ class FlockSimulatorNode(object):
             duckiestate_msg.status = String(data=duckie['status'])
             duckiestate_msg.lane = String(data=duckie['next_point']['lane'])
             duckiestate_msg.pose = Pose2D(
-                x=duckie['pose'].p[0] * self.state_manager.map.tile_size,
-                y=duckie['pose'].p[1] * self.state_manager.map.tile_size,
+                x=duckie['pose'].p[0] * self.state_manager.dt_map.tile_size,
+                y=duckie['pose'].p[1] * self.state_manager.dt_map.tile_size,
                 theta=duckie['pose'].theta)
             duckiestate_msg.velocity = Twist(
                 linear=Vector3(duckie['velocity']['linear'], 0, 0),
@@ -125,8 +125,8 @@ class FlockSimulatorNode(object):
         for duckie_id in duckies:
             duckie = duckies[duckie_id]
             theta = duckie['pose'].theta
-            x = duckie['pose'].p[0] * self.state_manager.map.tile_size
-            y = duckie['pose'].p[1] * self.state_manager.map.tile_size
+            x = duckie['pose'].p[0] * self.state_manager.dt_map.tile_size
+            y = duckie['pose'].p[1] * self.state_manager.dt_map.tile_size
 
             transform_broadcaster.sendTransform((x, y, 0), \
                 tf.transformations.quaternion_from_euler(0, 0, theta), \
@@ -135,20 +135,18 @@ class FlockSimulatorNode(object):
         for request_id in requests:
             request = requests[request_id]
 
-            pos_start = list(
-                self.state_manager.skeleton_graph.G.nodes(
-                    data=True)[request['start_node']]['point'].p)
-            pos_start[0] = pos_start[0] * self.state_manager.map.tile_size
-            pos_start[1] = pos_start[1] * self.state_manager.map.tile_size
+            pos_start = self.state_manager.dt_map.nodeToPose(
+                request['start_node']).p.copy()
+            pos_start[0] = pos_start[0] * self.state_manager.dt_map.tile_size
+            pos_start[1] = pos_start[1] * self.state_manager.dt_map.tile_size
             transform_broadcaster.sendTransform((pos_start[0], pos_start[1], 0), \
                 tf.transformations.quaternion_from_euler(0, 0, 0), \
                 stamp, '%s-start' % request_id, "request_link")
 
-            pos_end = list(
-                self.state_manager.skeleton_graph.G.nodes(
-                    data=True)[request['end_node']]['point'].p)
-            pos_end[0] = pos_end[0] * self.state_manager.map.tile_size
-            pos_end[1] = pos_end[1] * self.state_manager.map.tile_size
+            pos_end = self.state_manager.dt_map.nodeToPose(
+                request['end_node']).p.copy()
+            pos_end[0] = pos_end[0] * self.state_manager.dt_map.tile_size
+            pos_end[1] = pos_end[1] * self.state_manager.dt_map.tile_size
             transform_broadcaster.sendTransform((pos_end[0], pos_end[1], 0), \
                 tf.transformations.quaternion_from_euler(0, 0, 0), \
                 stamp, '%s-end' % request_id, "request_link")

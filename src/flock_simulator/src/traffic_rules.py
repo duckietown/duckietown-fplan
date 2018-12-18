@@ -3,29 +3,28 @@ import numpy as np
 
 
 def getVelocity(duckies, duckie, stop_distance, duckiebot_length, max_vel,
-                tile_size, skeleton_graph):
+                dt_map):
     # Distance to position where duckie wants to stand still
-    waypoint_distance = 2 * tile_size
+    waypoint_distance = 2 * dt_map.tile_size
 
     # Check for duckies in front
     for visible_duckie in duckie['in_fov']:
         distance_to_duckie = utils.distance(
-            duckie['pose'], duckies[visible_duckie]['pose']) * tile_size
+            duckie['pose'], duckies[visible_duckie]['pose']) * dt_map.tile_size
         if isInPath(duckie['pose'], duckies[visible_duckie]['pose'],
-                    2 * duckiebot_length, tile_size / 2, tile_size):
+                    2 * duckiebot_length, dt_map.tile_size / 2,
+                    dt_map.tile_size):
             waypoint_distance = min(
                 distance_to_duckie - stop_distance - duckiebot_length,
                 waypoint_distance)
 
     # If approaching intersection
     next_point = duckie['next_point']
-    node = utils.nodeFromLane(
-        list(skeleton_graph.G.edges(data=True)), next_point['lane'])
+    nodes = dt_map.laneToNodes(next_point['lane'])
 
-    if len(list(skeleton_graph.G.neighbors(
-            node))) > 1 and next_point['point_index'] == len(
-                skeleton_graph.root2.children[next_point['lane']]
-                .control_points) - 1:
+    if len(list(dt_map.graph.neighbors(
+            nodes[1]))) > 1 and next_point['point_index'] == len(
+                dt_map.lanes[next_point['lane']].control_points) - 1:
 
         for visible_duckie_id in duckie['in_fov']:
             visible_duckie = duckies[visible_duckie_id]
@@ -51,8 +50,8 @@ def getVelocity(duckies, duckie, stop_distance, duckiebot_length, max_vel,
             on_right_side = angle_to_duckie < 0 and angle_to_duckie > -np.pi / 2
 
             duckie_is_close = utils.distance(
-                duckie['pose'],
-                visible_duckie['pose']) * tile_size < np.sqrt(2.0) * tile_size
+                duckie['pose'], visible_duckie['pose']
+            ) * dt_map.tile_size < np.sqrt(2.0) * dt_map.tile_size
 
             duckie_towards_intersection = np.round(
                 utils.limitAngle(

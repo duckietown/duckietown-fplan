@@ -1,4 +1,5 @@
 import duckie_dynamics
+import duckietown_map
 import utils
 import random
 import numpy as np
@@ -18,12 +19,11 @@ class StateManager(object):
         self.duckiebot_length = 0.2  # Length of duckiebot in m
 
         # Map
-        self.map = dw.load_map(map_name)
-        self.skeleton_graph = dw.get_skeleton_graph(self.map['tilemap'])
+        self.dt_map = duckietown_map.DuckietownMap(map_name)
 
         # State of duckies
         self.duckies = duckie_dynamics.spawnDuckies(self.n_duckies,
-                                                    self.skeleton_graph)
+                                                    self.dt_map)
 
         # Requests
         self.requests = {}
@@ -47,8 +47,7 @@ class StateManager(object):
             # Update duckie's state
             duckies_update[duckie_id] = duckie_dynamics.updateDuckie(
                 self.duckies, duckie, command, self.stop_distance,
-                self.duckiebot_length, self.max_vel, self.skeleton_graph,
-                self.map.tile_size, dt)
+                self.duckiebot_length, self.max_vel, self.dt_map, dt)
 
             # Print duckie's pose
             # print('%s: [%f, %f], %f' %
@@ -83,7 +82,7 @@ class StateManager(object):
                     c_level = 1
                 # Only check if next_point is defined for duckie
                 elif self.duckies[duckie_id]['next_point'] and duckie_dynamics.lane_distance(
-                        self.duckies, duckie_id, self.skeleton_graph):
+                        self.duckies, duckie_id, self.dt_map):
                     c_level = 2
                 else:
                     c_level = 0
@@ -105,10 +104,10 @@ class StateManager(object):
         self.timestep += 1
 
     def genRequest(self):
-        start_node = random.choice(list(self.skeleton_graph.G.nodes()))
+        start_node = random.choice(self.dt_map.nodes)[0]
         end_node = start_node
         while end_node == start_node:
-            end_node = random.choice(list(self.skeleton_graph.G.nodes()))
+            end_node = random.choice(self.dt_map.nodes)[0]
         return {
             'timestep': self.timestep,
             'start_node': start_node,
@@ -128,11 +127,11 @@ class StateManager(object):
                     continue
 
                 # Update status
-                pose_start = self.skeleton_graph.G.nodes(data=True)[
-                    self.requests[request_id]['start_node']]['point']
+                pose_start = self.dt_map.nodeToPose(
+                    self.requests[request_id]['start_node'])
                 dist = utils.distance(self.duckies[duckie_id]['pose'],
                                       pose_start)
-                if dist * self.map.tile_size < self.duckiebot_length:
+                if dist * self.dt_map.tile_size < self.duckiebot_length:
                     print('%s has been picked up.' % request_id)
                     self.requests[request_id]['duckie_id'] = duckie_id
                     self.duckies[duckie_id]['status'] = 'DRIVINGWITHCUSTOMER'
@@ -147,11 +146,10 @@ class StateManager(object):
             request = self.requests[request_id]
             duckie_id = request['duckie_id']
             if duckie_id and self.duckies[duckie_id]['status'] == 'DRIVINGWITHCUSTOMER':
-                pose_end = self.skeleton_graph.G.nodes(
-                    data=True)[request['end_node']]['point']
+                pose_end = self.dt_map.nodeToPose(request['end_node'])
                 dist = utils.distance(self.duckies[duckie_id]['pose'],
                                       pose_end)
-                if dist * self.map.tile_size < self.duckiebot_length:
+                if dist * self.dt_map.tile_size < self.duckiebot_length:
                     print('%s has been dropped off.' % request_id)
                     self.filled_requests[request_id] = request
                     del requests[request_id]

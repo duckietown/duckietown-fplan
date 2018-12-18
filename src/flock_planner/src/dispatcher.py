@@ -4,8 +4,6 @@ import networkx as nx
 import numpy as np
 from flock_simulator.msg import FlockState, FlockCommand
 
-# TODO Implement duckie initial(t=0) status = 'IDLE'
-
 
 class Dispatcher(object):
     def __init__(self, skeleton_graph):
