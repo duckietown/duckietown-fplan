@@ -27,4 +27,7 @@ class DuckietownMap(object):
         end_node = start_node
         while end_node == start_node:
             end_node = random.choice(self.nodes)[0]
+        return self.getPath(start_node, end_node)
+
+    def getPath(self, start_node, end_node):
         return nx.dijkstra_path(self.graph, start_node, end_node)

@@ -17,6 +17,9 @@ class StateManager(object):
         # Map
         self.dt_map = duckietown_map.DuckietownMap(map_name)
 
+        # Timestep
+        self.timestep = 0
+
         # Duckies
         self.duckies = {}
         self.spawnDuckies()
@@ -25,9 +28,7 @@ class StateManager(object):
         self.requests = {}
         self.filled_requests = {}
         self.t_last_request = 0
-
-        # Timestep
-        self.timestep = 0
+        self.addRequest()
 
     def updateState(self, commands, dt):
         # Give commands
@@ -67,6 +68,8 @@ class StateManager(object):
                     request.status = 'PICKEDUP'
                     request.pickup_time = self.timestep
                     duckie.status = 'DRIVINGWITHCUSTOMER'
+                    duckie.path = self.dt_map.getPath(duckie.path[0],
+                                                      request.end_node)
                 else:
                     duckie.status = 'DRIVINGTOCUSTOMER'
             else:
@@ -86,14 +89,17 @@ class StateManager(object):
                 del self.requests[request_id]
 
         # Add request
-        if self.timestep - self.t_last_request > self.t_requests / dt:
-            request_id = 'request-%d' % (
-                len(self.requests) + len(self.filled_requests))
-            self.requests[request_id] = Request(request_id, self.dt_map.nodes,
-                                                self.timestep)
-            self.t_last_request = self.timestep
-            print('New request added. Number of open requests: %d' % len(
-                self.requests))
+        if self.t_requests != 0 and self.timestep - self.t_last_request > self.t_requests / dt:
+            self.addRequest()
+
+    def addRequest(self):
+        request_id = 'request-%d' % (
+            len(self.requests) + len(self.filled_requests))
+        self.requests[request_id] = Request(request_id, self.dt_map.nodes,
+                                            self.timestep)
+        self.t_last_request = self.timestep
+        print('New request added. Number of open requests: %d' % len(
+            self.requests))
 
     def spawnDuckies(self):
         occupied_lanes = []
