@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/duckietown/duckietown-fplan.svg?style=svg)](https://circleci.com/gh/duckietown/duckietown-fplan)
+
 # fleetplanning18
 Fleet planning simulator developed as a AMOD course project 2018
 
