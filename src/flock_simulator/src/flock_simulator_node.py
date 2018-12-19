@@ -3,7 +3,6 @@
 import rospy
 import tf
 import state_manager
-import time
 from std_msgs.msg import String, Bool, UInt8, UInt32
 from geometry_msgs.msg import Pose2D, Twist, Vector3
 from flock_simulator.msg import Request, FlockState, FlockCommand, DuckieState
@@ -127,34 +126,34 @@ class FlockSimulatorNode(object):
         requests = self.state_manager.requests
         stamp = rospy.Time.now()
 
-        for duckie_id in duckies:
-            duckie = duckies[duckie_id]
+        for duckie in duckies.values():
             theta = duckie.pose.theta
             x = duckie.pose.p[0] * self.state_manager.dt_map.tile_size
             y = duckie.pose.p[1] * self.state_manager.dt_map.tile_size
 
             transform_broadcaster.sendTransform((x, y, 0), \
                 tf.transformations.quaternion_from_euler(0, 0, theta), \
-                stamp, duckie_id, "duckiebot_link")
+                stamp, duckie.id, "duckiebot_link")
 
-        for request_id in requests:
-            request = requests[request_id]
-
-            pos_start = self.state_manager.dt_map.nodeToPose(
-                request.start_node).p.copy()
-            pos_start[0] = pos_start[0] * self.state_manager.dt_map.tile_size
-            pos_start[1] = pos_start[1] * self.state_manager.dt_map.tile_size
-            transform_broadcaster.sendTransform((pos_start[0], pos_start[1], 0), \
-                tf.transformations.quaternion_from_euler(0, 0, 0), \
-                stamp, '%s-start' % request_id, "request_link")
-
-            pos_end = self.state_manager.dt_map.nodeToPose(
-                request.end_node).p.copy()
-            pos_end[0] = pos_end[0] * self.state_manager.dt_map.tile_size
-            pos_end[1] = pos_end[1] * self.state_manager.dt_map.tile_size
-            transform_broadcaster.sendTransform((pos_end[0], pos_end[1], 0), \
-                tf.transformations.quaternion_from_euler(0, 0, 0), \
-                stamp, '%s-end' % request_id, "request_link")
+        for request in requests.values():
+            if request.status == 'WAITING':
+                pos_start = self.state_manager.dt_map.nodeToPose(
+                    request.start_node).p.copy()
+                pos_start[0] = pos_start[
+                    0] * self.state_manager.dt_map.tile_size
+                pos_start[1] = pos_start[
+                    1] * self.state_manager.dt_map.tile_size
+                transform_broadcaster.sendTransform((pos_start[0], pos_start[1], 0), \
+                    tf.transformations.quaternion_from_euler(0, 0, 0), \
+                    stamp, '%s' % request.id, "request_link")
+            elif request.status == 'PICKEDUP':
+                pos_end = self.state_manager.dt_map.nodeToPose(
+                    request.end_node).p.copy()
+                pos_end[0] = pos_end[0] * self.state_manager.dt_map.tile_size
+                pos_end[1] = pos_end[1] * self.state_manager.dt_map.tile_size
+                transform_broadcaster.sendTransform((pos_end[0], pos_end[1], 0), \
+                    tf.transformations.quaternion_from_euler(0, 0, 0), \
+                    stamp, '%s' % request.id, "request_link")
 
     def onShutdown(self):
         rospy.loginfo('[%s] Shutdown.' % (self.node_name))
