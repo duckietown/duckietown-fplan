@@ -37,22 +37,16 @@ class Duckiebot(object):
         path_command = command['path'] if 'path' in command else None
         self.updateNextPoint(path_command, dt_map)
 
-    def initialize(self, lane, dt_map):
+    def initialize(self, point, dt_map):
         # Pose
-        point_index = random.choice(
-            range(len(dt_map.lanes[lane].control_points)))
-        self.pose = dt_map.lanes[lane].control_points[point_index]
+        self.pose = point['pose']
 
         # Path
-        nodes = dt_map.laneToNodes(lane)
+        nodes = dt_map.laneToNodes(point['lane'])
         self.path = dt_map.getRandomPath(nodes[1])
 
         # Next point
-        self.next_point = {
-            'lane': lane,
-            'point_index': point_index,
-            'pose': self.pose
-        }
+        self.next_point = point
         self.updateNextPoint(None, dt_map)
 
         print('Initialized %s.' % self.id)

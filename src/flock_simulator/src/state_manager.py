@@ -125,14 +125,29 @@ class StateManager(object):
             self.requests))
 
     def spawnDuckies(self):
-        occupied_lanes = []
+        occupied_poses = []
         for i in range(self.n_duckies):
             spawn_is_occupied = True
             while spawn_is_occupied:
                 lane = random.sample(self.dt_map.lanes, 1)[0]
-                if lane not in occupied_lanes:
+                point_index = random.choice(
+                    range(len(self.dt_map.lanes[lane].control_points)))
+                pose = self.dt_map.lanes[lane].control_points[point_index]
+                point = {
+                    'lane': lane,
+                    'point_index': point_index,
+                    'pose': pose
+                }
+
+                spawn_is_occupied = False
+                for occupied_pose in occupied_poses:
+                    if utils.distance(pose,
+                                      occupied_pose) < self.dt_map.tile_size:
+                        spawn_is_occupied = True
+                        break
+
+                if not spawn_is_occupied:
                     duckie_id = 'duckie-%d' % i
                     self.duckies[duckie_id] = Duckiebot(
-                        duckie_id, lane, self.dt_map)
-                    spawn_is_occupied = False
-                    occupied_lanes.append(lane)
+                        duckie_id, point, self.dt_map)
+                    occupied_poses.append(pose)
