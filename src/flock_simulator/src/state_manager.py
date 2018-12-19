@@ -51,9 +51,13 @@ class StateManager(object):
 
     def updateRequests(self, commands, dt):
         for duckie_id, command in commands.items():
-            request = self.requests[command['request_id']] if command[
-                'request_id'] else None
-            duckie = self.duckies[duckie_id]
+            if command['request_id'] in self.requests:
+                request = self.requests[command['request_id']] if command[
+                    'request_id'] else None
+                duckie = self.duckies[duckie_id]
+            else:
+                # If dispatcher assigns request to duckie that is not available anymore
+                continue
 
             # Duckie can be IDLE, REBALANCING, DRIVINGTOCUSTOMER, DRIVINGWITHCUSTOMER
             # Request can be none, WAITING, PICKEDUP, FILLED
