@@ -7,9 +7,11 @@ import duckietown_world as dw
 
 class Duckiebot(object):
     def __init__(self, id, lane=None, dt_map=None):
-        self.length = 0.2
-        self.max_vel = 0.5
-        self.stop_distance = 0.1
+        self.fov = [2.0 / 3.0 * np.pi,
+                    2.0]  # Field of view (angle, distance in tiles)
+        self.max_vel = 0.5  # Max. velocity in m/s
+        self.stop_distance = 0.1  # Distance between duckies in m
+        self.length = 0.1  # Length of duckiebot in m
 
         self.id = id
         self.pose = dw.SE2Transform([0.0, 0.0], 0.0)
@@ -78,6 +80,26 @@ class Duckiebot(object):
             'linear': command['linear'],
             'angular': command['angular']
         }
+
+    def updateFov(self, duckies):
+        self.in_fov[:] = []
+        for duckie in duckies.values():
+            if duckie.id == self.id:
+                continue
+            if utils.distance(self.pose,
+                              duckie.pose) < self.fov[1] and utils.isInFront(
+                                  self.pose, duckie.pose, self.fov[0]):
+                self.in_fov.append(duckie.id)
+
+    def updateCollision(self, duckies, tile_size):
+        for duckie in duckies.values():
+            if duckie.id == self.id:
+                continue
+            if utils.distance(self.pose, duckie.pose
+                              ) * tile_size < self.length + duckie.length:
+                self.collision_level = 1
+                self.max_vel = 0
+                print('%s collided!' % self.id)
 
     def getCommandFromPoints(self, duckies, dt_map, dt):
         # If no next_point, stand still

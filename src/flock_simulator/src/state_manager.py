@@ -13,11 +13,6 @@ class StateManager(object):
         # Parameters
         self.t_requests = t_requests  # Seconds between requests
         self.n_duckies = n_duckies  # Number of duckies
-        self.fov = [2.0 / 3.0 * np.pi,
-                    2.0]  # Field of view (angle, distance in tiles)
-        self.max_vel = 0.5  # Max. velocity in m/s
-        self.stop_distance = 0.1  # Distance between duckies in m
-        self.duckiebot_length = 0.2  # Length of duckiebot in m
 
         # Map
         self.dt_map = duckietown_map.DuckietownMap(map_name)
@@ -35,57 +30,28 @@ class StateManager(object):
         self.timestep = 0
 
     def updateState(self, commands, dt):
+        # Give commands
         for duckie_id in self.duckies:
             # Use commands if received, otherwise drive around randomly
-            if duckie_id in commands:
-                command = commands[duckie_id]
-            else:
-                command = None
+            command = commands[duckie_id] if duckie_id in commands else None
 
             # Update duckie's state
             self.duckies[duckie_id].update(self.duckies, command, self.dt_map,
                                            dt)
 
         # Update interactions between duckies
-        for duckie_id in self.duckies:
-            duckie = self.duckies[duckie_id]
-            duckie.in_fov[:] = []
-            for other_duckie_id in self.duckies:
-                if duckie_id == other_duckie_id:
-                    continue
-
-                other_duckie = self.duckies[other_duckie_id]
-                distance = utils.distance(duckie.pose, other_duckie.pose)
-
-                # Update field of view
-                if distance < self.fov[1] and utils.isInFront(
-                        duckie.pose, other_duckie.pose, self.fov[0]):
-                    duckie.in_fov.append(other_duckie.id)
-
-                # Update collision status
-                if distance * self.dt_map.tile_size < self.duckiebot_length:
-                    c_level = 1
-                else:
-                    c_level = 0
-                duckie.collision_level = c_level
+        for duckie in self.duckies.values():
+            duckie.updateFov(self.duckies)
+            duckie.updateCollision(self.duckies, self.dt_map.tile_size)
 
         # Requests
-        self.updateRequests(commands)
-        if self.timestep - self.t_last_request > self.t_requests / dt:
-            request_id = 'request-%d' % (
-                len(self.requests) + len(self.filled_requests))
-            self.requests[request_id] = Request(request_id, self.dt_map.nodes,
-                                                self.timestep)
-            self.t_last_request = self.timestep
-            print('New request added. Current open requests: %s' % list(
-                self.requests))
+        self.updateRequests(commands, dt)
 
         self.timestep += 1
 
-    def updateRequests(self, commands):
-        for duckie_id in commands:
+    def updateRequests(self, commands, dt):
+        for duckie_id, command in commands.items():
             duckie = self.duckies[duckie_id]
-            command = commands[duckie_id]
             if command['request_id']:
                 request_id = command['request_id']
                 request = self.requests[request_id]
@@ -96,34 +62,39 @@ class StateManager(object):
                 # Update status
                 pose_start = self.dt_map.nodeToPose(request.start_node)
                 dist = utils.distance(duckie.pose, pose_start)
-                if dist * self.dt_map.tile_size < self.duckiebot_length:
+                if dist * self.dt_map.tile_size < duckie.length:
                     print('%s has been picked up.' % request_id)
                     request.duckie_id = duckie.id
                     request.status = 'PICKEDUP'
+                    request.pickup_time = self.timestep
                     duckie.status = 'DRIVINGWITHCUSTOMER'
                 else:
                     duckie.status = 'DRIVINGTOCUSTOMER'
             else:
                 duckie.status = 'IDLE'
 
-        # Update filled_requests
-        requests = self.requests.copy()
-        for request_id in self.requests:
-            request = self.requests[request_id]
+        # Update requests
+        for request in self.requests.values():
             if not request.duckie_id:
                 continue
-            duckie = self.duckies[request.duckie_id]
-            if request.status == 'PICKEDUP' and duckie.status == 'DRIVINGWITHCUSTOMER':
-                pose_end = self.dt_map.nodeToPose(request.end_node)
-                dist = utils.distance(duckie.pose, pose_end)
-                if dist * self.dt_map.tile_size < self.duckiebot_length:
-                    print('%s has been dropped off.' % request_id)
-                    duckie.status = 'IDLE'
-                    request.status = 'FILLED'
-                    request.end_time = self.timestep
-                    self.filled_requests[request_id] = request
-                    del requests[request_id]
-        self.requests = requests.copy()
+            request.update(self.duckies[request.duckie_id], self.dt_map,
+                           self.timestep)
+
+        # Move from requests to filled_requests
+        for request_id in list(self.requests.keys()):
+            if self.requests[request_id].status == 'FILLED':
+                self.filled_requests[request_id] = self.requests[request_id]
+                del self.requests[request_id]
+
+        # Add request
+        if self.timestep - self.t_last_request > self.t_requests / dt:
+            request_id = 'request-%d' % (
+                len(self.requests) + len(self.filled_requests))
+            self.requests[request_id] = Request(request_id, self.dt_map.nodes,
+                                                self.timestep)
+            self.t_last_request = self.timestep
+            print('New request added. Number of open requests: %d' % len(
+                self.requests))
 
     def spawnDuckies(self):
         occupied_lanes = []
