@@ -18,6 +18,15 @@ jobs:
     working_directory: ~/repo
     steps:
       - checkout
+      - run:
+          name: Install project deps in a venv
+          command: |
+            python -m venv venv
+            . venv/bin/activate
+            git clone --recursive https://github.com/duckietown/duckietown-world.git
+            cd duckietown-world
+            pip install -r requirements.txt
+            python setup.py develop --no-deps
   test-3.5:
     <<: *test-template
     docker:
