@@ -1,4 +1,6 @@
+import random
 import duckietown_world as dw
+import networkx as nx
 
 
 class DuckietownMap(object):
@@ -17,3 +19,12 @@ class DuckietownMap(object):
 
     def nodeToPose(self, node):
         return self.graph.nodes(data=True)[node]['point']
+
+    def nodesToLane(self, nodes):
+        return self.graph.get_edge_data(nodes[0], nodes[1])[0]['lane']
+
+    def getRandomPath(self, start_node):
+        end_node = start_node
+        while end_node == start_node:
+            end_node = random.choice(self.nodes)[0]
+        return nx.dijkstra_path(self.graph, start_node, end_node)

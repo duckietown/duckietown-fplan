@@ -11,7 +11,7 @@ class Duckiebot(object):
                     2.0]  # Field of view (angle, distance in tiles)
         self.max_vel = 0.5  # Max. velocity in m/s
         self.stop_distance = 0.1  # Distance between duckies in m
-        self.length = 0.1  # Length of duckiebot in m
+        self.length = 0.2  # Length (diameter) of duckiebot in m
 
         self.id = id
         self.pose = dw.SE2Transform([0.0, 0.0], 0.0)
@@ -21,6 +21,7 @@ class Duckiebot(object):
             'point_index': 0,
             'pose': dw.SE2Transform([0.0, 0.0], 0.0)
         }
+        self.path = []
         self.status = 'IDLE'
         self.in_fov = []
         self.collision_level = 0
@@ -33,28 +34,28 @@ class Duckiebot(object):
 
         self.giveCommand(command, dt_map.tile_size, dt)
 
-        if self.next_point and 'goal_node' in command:
-            self.next_point = utils.getNextPoint(command['goal_node'], dt_map,
-                                                 self.pose, self.next_point)
-        else:
-            self.next_point = utils.getNextPoint(None, dt_map, self.pose,
-                                                 self.next_point)
+        path_command = command['path'] if 'path' in command else None
+        self.updateNextPoint(path_command, dt_map)
 
     def initialize(self, lane, dt_map):
+        # Pose
         point_index = random.choice(
             range(len(dt_map.lanes[lane].control_points)))
-        pose = dt_map.lanes[lane].control_points[point_index]
-        nodes = dt_map.laneToNodes(lane)
-        node_next = random.choice(list(dt_map.graph.neighbors(nodes[1])))
-        lane_next = dt_map.graph.get_edge_data(nodes[1], node_next)[0]['lane']
-        pose_next = dt_map.lanes[lane_next].control_points[0]
+        self.pose = dt_map.lanes[lane].control_points[point_index]
 
-        self.pose = pose
+        # Path
+        nodes = dt_map.laneToNodes(lane)
+        self.path = dt_map.getRandomPath(nodes[1])
+
+        # Next point
         self.next_point = {
-            'lane': lane_next,
-            'point_index': 0,
-            'pose': pose_next
+            'lane': lane,
+            'point_index': point_index,
+            'pose': self.pose
         }
+        self.updateNextPoint(None, dt_map)
+
+        print('Initialized %s.' % self.id)
 
     def giveCommand(self, command, tile_size, dt):
         v = command['linear'] / tile_size
@@ -81,6 +82,46 @@ class Duckiebot(object):
             'angular': command['angular']
         }
 
+    def updateNextPoint(self, new_path, dt_map):
+        # Check new_path
+        if new_path:
+            # First node has to be same
+            if new_path[0] != self.path[0]:
+                print('Path from command for %s invalid!' % self.id)
+            else:
+                self.path = new_path
+
+        lane_control_points = dt_map.lanes[self.next_point[
+            'lane']].control_points
+        current_point_lane = self.next_point['lane']
+        current_point_index = self.next_point['point_index']
+        current_point_pose = self.next_point['pose']
+
+        # If current_point in front, keep it as next_point
+        if utils.isInFront(self.pose, current_point_pose, np.pi):
+            return
+
+        # If current lane has more control points, set next one as next_point
+        if len(lane_control_points) > current_point_index + 1:
+            self.next_point = {
+                'lane': current_point_lane,
+                'point_index': current_point_index + 1,
+                'pose': lane_control_points[current_point_index + 1]
+            }
+            return
+
+        # Generate random new path if path has only one node left
+        if len(self.path) == 1:
+            self.path = dt_map.getRandomPath(self.path[0])
+
+        next_lane = dt_map.nodesToLane([self.path[0], self.path[1]])
+        self.next_point = {
+            'lane': next_lane,
+            'point_index': 1,
+            'pose': dt_map.lanes[next_lane].control_points[1]
+        }
+        del self.path[0]
+
     def updateFov(self, duckies):
         self.in_fov[:] = []
         for duckie in duckies.values():
@@ -93,17 +134,20 @@ class Duckiebot(object):
 
     def updateCollision(self, duckies, tile_size):
         for duckie in duckies.values():
-            if duckie.id == self.id:
+            if duckie.id == self.id or self.collision_level == 1:
                 continue
-            if utils.distance(self.pose, duckie.pose
-                              ) * tile_size < self.length + duckie.length:
+            if utils.distance(
+                    self.pose, duckie.pose
+            ) * tile_size < self.length / 2 + duckie.length / 2:
                 self.collision_level = 1
                 self.max_vel = 0
                 print('%s collided!' % self.id)
 
     def getCommandFromPoints(self, duckies, dt_map, dt):
         # If no next_point, stand still
-        if not self.next_point:
+        if not self.next_point or not utils.isInFront(
+                self.pose, self.next_point['pose'], np.pi):
+            print('None or invalid point to follow for %s' % self.id)
             return {'linear': 0, 'angular': 0, 'on_rails': False}
 
         point_pose = self.next_point['pose']

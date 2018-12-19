@@ -31,13 +31,12 @@ class StateManager(object):
 
     def updateState(self, commands, dt):
         # Give commands
-        for duckie_id in self.duckies:
+        for duckie_id, duckie in self.duckies.items():
             # Use commands if received, otherwise drive around randomly
             command = commands[duckie_id] if duckie_id in commands else None
 
             # Update duckie's state
-            self.duckies[duckie_id].update(self.duckies, command, self.dt_map,
-                                           dt)
+            duckie.update(self.duckies, command, self.dt_map, dt)
 
         # Update interactions between duckies
         for duckie in self.duckies.values():
