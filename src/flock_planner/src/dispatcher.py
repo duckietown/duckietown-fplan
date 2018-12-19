@@ -41,26 +41,28 @@ class Dispatcher(object):
 
         # Get open requests
         open_requests = {}
+        requests_with_duckie = {}
         for request_id in requests:
-            if not requests[request_id]['duckie_id']:
+            if requests[request_id]['duckie_id']:
+                requests_with_duckie[request_id] = requests[request_id]
+            else:
                 open_requests[request_id] = requests[request_id]
 
-        # check if there are requests
-        if open_requests:
-            assigned_requests = []
+        assigned_requests = []
 
-            # Update duckiestatus
-            for duckie_id in duckies:
-                if not open_requests:
-                    break
+        # Generate paths for duckies
+        for duckie_id, duckie in duckies.items():
+            current_node = self.node(
+                duckie['lane'])  # Node the duckie is heading to
 
-                duckie = duckies[duckie_id]
-                if duckie['status'] == 'DRIVINGWITHCUSTOMER':
-                    continue
+            if duckie['status'] == 'DRIVINGWITHCUSTOMER':
+                assigned_request_id, assigned_request = next(
+                    (request_id, request)
+                    for request_id, request in requests_with_duckie.items()
+                    if request['duckie_id'] == duckie_id)
+                goal_node = assigned_request['end_node']
 
-                current_node = self.node(
-                    duckie['lane'])  # Node the duckie is heading to
-
+            else:
                 # find closest open request
                 closest_request_id = None
                 closest_distance = np.inf
@@ -70,17 +72,18 @@ class Dispatcher(object):
                     if open_request_id not in assigned_requests and distance < closest_distance:
                         closest_distance = distance
                         closest_request_id = open_request_id
-
                 if closest_request_id:
-                    closest_request = open_requests[closest_request_id]
-                    start_node = closest_request['start_node']
-                    assigned_requests.append(closest_request_id)
+                    assigned_request_id = closest_request_id
+                    assigned_request = open_requests[closest_request_id]
+                    goal_node = assigned_request['start_node']
+                    assigned_requests.append(assigned_request_id)
+                else:
+                    continue
 
-                    # generate path and assign
-                    path_pair = self.generatePathPair(duckie_id,
-                                                      closest_request_id,
-                                                      current_node, start_node)
-                    paths.append(path_pair)
+            # generate path and assign
+            path_pair = self.generatePathPair(duckie_id, assigned_request_id,
+                                              current_node, goal_node)
+            paths.append(path_pair)
 
         # generateCommands from path
         # EXAMPLE FOR PATHS:

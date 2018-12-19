@@ -227,3 +227,7 @@ class Duckiebot(object):
             return
 
         self.pose = pose_new
+
+    def reachedNode(self, node, dt_map):
+        pose = dt_map.nodeToPose(node)
+        return utils.distance(self.pose, pose) < self.length / 2

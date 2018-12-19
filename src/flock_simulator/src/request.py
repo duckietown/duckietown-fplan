@@ -19,17 +19,3 @@ class Request(object):
         self.end_node = self.start_node
         while self.end_node == self.start_node:
             self.end_node = random.choice(nodes)[0]
-
-    def update(self, duckie, dt_map, timestep):
-        if self.status == 'PICKEDUP':
-            if duckie.status != 'DRIVINGWITHCUSTOMER':
-                print('%s picked up %s but is not driving with customer!' %
-                      (duckie.id, self.id))
-                return
-            pose_end = dt_map.nodeToPose(self.end_node)
-            dist = utils.distance(duckie.pose, pose_end) * dt_map.tile_size
-            if dist < duckie.length:
-                print('%s has been dropped off.' % self.id)
-                duckie.status = 'IDLE'
-                self.status = 'FILLED'
-                self.end_time = timestep

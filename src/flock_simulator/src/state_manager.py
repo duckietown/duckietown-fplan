@@ -51,36 +51,55 @@ class StateManager(object):
 
     def updateRequests(self, commands, dt):
         for duckie_id, command in commands.items():
+            request = self.requests[command['request_id']] if command[
+                'request_id'] else None
             duckie = self.duckies[duckie_id]
-            if command['request_id']:
-                request_id = command['request_id']
-                request = self.requests[request_id]
-                if duckie.status == 'DRIVINGWITHCUSTOMER' and request.duckie_id != duckie.id:
-                    print('Cannot reassign duckie driving with customer.')
-                    continue
 
-                # Update status
-                pose_start = self.dt_map.nodeToPose(request.start_node)
-                dist = utils.distance(duckie.pose, pose_start)
-                if dist * self.dt_map.tile_size < duckie.length:
-                    print('%s has been picked up.' % request_id)
-                    request.duckie_id = duckie.id
-                    request.status = 'PICKEDUP'
-                    request.pickup_time = self.timestep
-                    duckie.status = 'DRIVINGWITHCUSTOMER'
-                    duckie.path = self.dt_map.getPath(duckie.path[0],
-                                                      request.end_node)
-                else:
-                    duckie.status = 'DRIVINGTOCUSTOMER'
-            else:
-                duckie.status = 'IDLE'
+            # Duckie can be IDLE, REBALANCING, DRIVINGTOCUSTOMER, DRIVINGWITHCUSTOMER
+            # Request can be none, WAITING, PICKEDUP, FILLED
+            # command['path'] can be empty or not
 
-        # Update requests
-        for request in self.requests.values():
-            if not request.duckie_id:
-                continue
-            request.update(self.duckies[request.duckie_id], self.dt_map,
-                           self.timestep)
+            if duckie.status != 'DRIVINGWITHCUSTOMER':
+                if not request:
+                    if command['path']:
+                        duckie.status = 'REBALANCING'
+                        duckie.path = command['path']
+                elif request.status == 'WAITING':
+                    if duckie.reachedNode(request.start_node, self.dt_map):
+                        duckie.status = 'DRIVINGWITHCUSTOMER'
+                        request.status = 'PICKEDUP'
+                        request.duckie_id = duckie.id
+                        request.pickup_time = self.timestep
+                        print('%s has been picked up by %s' % (request.id,
+                                                               duckie.id))
+                    else:
+                        duckie.status = 'DRIVINGTOCUSTOMER'
+                    if command['path']:
+                        duckie.path = command['path']
+                    else:
+                        print('%s assigned to %s but has no path to follow.' %
+                              (duckie.id, request.id))
+                elif request:
+                    print('%s is %s but %s is assigned and %s!' %
+                          (request.id, request.status, duckie.id,
+                           duckie.status))
+            elif duckie.status == 'DRIVINGWITHCUSTOMER':
+                if not request:
+                    print(
+                        '%s is driving with customer but not assigned to a request!'
+                        % duckie.id)
+                elif request.status == 'PICKEDUP':
+                    if duckie.reachedNode(request.end_node, self.dt_map):
+                        duckie.status = 'IDLE'
+                        request.status = 'FILLED'
+                        request.end_time = self.timestep
+                        print('%s has been dropped off by %s' % (request.id,
+                                                                 duckie.id))
+                    if command['path']:
+                        duckie.path = command['path']
+                    else:
+                        print('%s picked up %s but has no path to follow.' %
+                              (duckie.id, request.id))
 
         # Move from requests to filled_requests
         for request_id in list(self.requests.keys()):
