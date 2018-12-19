@@ -97,18 +97,7 @@ class Dispatcher(object):
         #   }, ...
         # ]
 
-        self.commands = self.generateCommands(paths)
-
-    def generateCommands(self, paths):
-        commands = []
-        for path in paths:
-            command = {
-                'duckie_id': path['duckie_id'],
-                'request_id': path['request_id'],
-                'goal_node': path['path'][0]
-            }
-            commands.append(command)
-        return commands
+        self.commands = paths
 
     def getClosestRequest(self, open_requests, node):
         if not open_requests:  # if no open requests

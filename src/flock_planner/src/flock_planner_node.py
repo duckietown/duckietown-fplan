@@ -60,8 +60,10 @@ class FlockPlannerNode(object):
             command_msg = DuckieCommand()
             command_msg.duckie_id = String(data=command['duckie_id'])
             command_msg.request_id = String(data=command['request_id'])
-            command_msg.node_command = String(data=command['goal_node'])
             command_msg.on_rails = Bool(data=True)
+            command_msg.path = []
+            for node in command['path']:
+                command_msg.path.append(String(data=node))
             msg.duckie_commands.append(command_msg)
         return msg
 

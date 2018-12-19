@@ -58,8 +58,11 @@ class FlockSimulatorNode(object):
         for command in msg.duckie_commands:
             on_rails = command.on_rails.data
             if on_rails:
+                path = []
+                for node in command.path:
+                    path.append(node.data)
                 commands[command.duckie_id.data] = {
-                    'goal_node': command.node_command.data,
+                    'path': path,
                     'on_rails': on_rails,
                     'request_id': command.request_id.data
                 }
