@@ -21,8 +21,6 @@ jobs:
       - run:
           name: Install project deps in a venv
           command: |
-            python -m venv venv
-            . venv/bin/activate
             git clone --recursive https://github.com/duckietown/duckietown-world.git
             cd duckietown-world
             pip install -r requirements.txt
