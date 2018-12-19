@@ -1,10 +1,10 @@
-import duckie_dynamics
 import duckietown_map
 import utils
 import random
 import numpy as np
 import networkx as nx
 import duckietown_world as dw
+from duckiebot import Duckiebot
 from request import Request
 
 
@@ -22,9 +22,9 @@ class StateManager(object):
         # Map
         self.dt_map = duckietown_map.DuckietownMap(map_name)
 
-        # State of duckies
-        self.duckies = duckie_dynamics.spawnDuckies(self.n_duckies,
-                                                    self.dt_map)
+        # Duckies
+        self.duckies = {}
+        self.spawnDuckies()
 
         # Requests
         self.requests = {}
@@ -43,9 +43,8 @@ class StateManager(object):
                 command = None
 
             # Update duckie's state
-            duckie_dynamics.updateDuckie(
-                self.duckies, duckie_id, command, self.stop_distance,
-                self.duckiebot_length, self.max_vel, self.dt_map, dt)
+            self.duckies[duckie_id].update(self.duckies, command, self.dt_map,
+                                           dt)
 
         # Update interactions between duckies
         for duckie_id in self.duckies:
@@ -59,17 +58,13 @@ class StateManager(object):
                 distance = utils.distance(duckie.pose, other_duckie.pose)
 
                 # Update field of view
-                if distance < self.fov[1] and duckie_dynamics.isInFront(
+                if distance < self.fov[1] and utils.isInFront(
                         duckie.pose, other_duckie.pose, self.fov[0]):
                     duckie.in_fov.append(other_duckie.id)
 
                 # Update collision status
                 if distance * self.dt_map.tile_size < self.duckiebot_length:
                     c_level = 1
-                # Only check if next_point is defined for duckie
-                elif duckie.next_point and duckie_dynamics.lane_distance(
-                        self.duckies, duckie_id, self.dt_map):
-                    c_level = 2
                 else:
                     c_level = 0
                 duckie.collision_level = c_level
@@ -129,3 +124,16 @@ class StateManager(object):
                     self.filled_requests[request_id] = request
                     del requests[request_id]
         self.requests = requests.copy()
+
+    def spawnDuckies(self):
+        occupied_lanes = []
+        for i in range(self.n_duckies):
+            spawn_is_occupied = True
+            while spawn_is_occupied:
+                lane = random.sample(self.dt_map.lanes, 1)[0]
+                if lane not in occupied_lanes:
+                    duckie_id = 'duckie-%d' % i
+                    self.duckies[duckie_id] = Duckiebot(
+                        duckie_id, lane, self.dt_map)
+                    spawn_is_occupied = False
+                    occupied_lanes.append(lane)
