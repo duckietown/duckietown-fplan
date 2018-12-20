@@ -40,7 +40,7 @@ class Dispatcher(object):
         requests = state['requests']
         paths = []
 
-        # Get open requests
+        # Get open requests and requests already picked up
         open_requests = {}
         requests_with_duckie = {}
         for request_id in requests:
@@ -62,7 +62,6 @@ class Dispatcher(object):
                     for request_id, request in requests_with_duckie.items()
                     if request['duckie_id'] == duckie_id)
                 goal_node = assigned_request['end_node']
-
             else:
                 # find closest open request
                 closest_request_id = None
