@@ -56,7 +56,9 @@ class StateManager(object):
                 duckie.status = 'IDLE'
             else:
                 command = commands[duckie_id]
-                if command['request_id'] in self.requests:
+                if not command['request_id']:
+                    request = None
+                elif command['request_id'] in self.requests:
                     request = self.requests[command['request_id']] if command[
                         'request_id'] else None
                     duckie = self.duckies[duckie_id]
