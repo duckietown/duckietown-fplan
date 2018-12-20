@@ -19,6 +19,7 @@ class StateManager(object):
 
         # Timestep
         self.timestep = 0
+        self.last_dt = 0
 
         # Duckies
         self.duckies = {}
@@ -47,6 +48,7 @@ class StateManager(object):
         self.updateRequests(commands, dt)
 
         self.timestep += 1
+        self.last_dt = dt
 
     def updateRequests(self, commands, dt):
         for duckie_id, duckie in self.duckies.items():
@@ -79,8 +81,11 @@ class StateManager(object):
                             request.status = 'PICKEDUP'
                             request.duckie_id = duckie.id
                             request.pickup_time = self.timestep
-                            print('%s has been picked up by %s' % (request.id,
-                                                                   duckie.id))
+                            print(
+                                '%s has been picked up. Waiting time: %d seconds'
+                                % (request.id,
+                                   (request.pickup_time - request.start_time
+                                    ) * dt))
                         else:
                             duckie.status = 'DRIVINGTOCUSTOMER'
                         if command['path']:
@@ -103,8 +108,7 @@ class StateManager(object):
                             duckie.status = 'IDLE'
                             request.status = 'FILLED'
                             request.end_time = self.timestep
-                            print('%s has been dropped off by %s' %
-                                  (request.id, duckie.id))
+                            print('%s has been dropped off.' % request.id)
                         if command['path']:
                             duckie.path = command['path']
                         else:
@@ -158,3 +162,23 @@ class StateManager(object):
                     self.duckies[duckie_id] = Duckiebot(
                         duckie_id, point, self.dt_map)
                     occupied_poses.append(pose)
+
+    def printStatus(self):
+        waiting_times = []
+        for request in self.filled_requests.values():
+            waiting_times.append(
+                (request.pickup_time - request.start_time) * self.last_dt)
+        status_list = [
+            'IDLE', 'REBALANCING', 'DRIVINGTOCUSTOMER', 'DRIVINGWITHCUSTOMER'
+        ]
+        status_times = {}
+        for status in status_list:
+            status_time = []
+            for duckie in self.duckies.values():
+                status_time.append(duckie.status_times[status] * self.last_dt)
+            status_times[status] = status_time
+
+        print('Average waiting time: %d seconds' % np.mean(waiting_times))
+        print('Average time spent in ')
+        for status in status_list:
+            print('  %s: %d seconds' % (status, np.mean(status_times[status])))

@@ -23,6 +23,12 @@ class Duckiebot(object):
         }
         self.path = []
         self.status = 'IDLE'
+        self.status_times = {
+            'IDLE': 0,
+            'REBALANCING': 0,
+            'DRIVINGTOCUSTOMER': 0,
+            'DRIVINGWITHCUSTOMER': 0
+        }
         self.in_fov = []
         self.collision_level = 0
         if lane and dt_map:
@@ -36,6 +42,8 @@ class Duckiebot(object):
 
         path_command = command['path'] if 'path' in command else None
         self.updateNextPoint(path_command, dt_map)
+
+        self.status_times[self.status] += 1
 
     def initialize(self, point, dt_map):
         # Pose
