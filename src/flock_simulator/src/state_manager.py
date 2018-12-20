@@ -53,7 +53,14 @@ class StateManager(object):
     def updateRequests(self, commands, dt):
         for duckie_id, duckie in self.duckies.items():
             if duckie_id not in commands.keys():
-                duckie.status = 'IDLE'
+                if duckie.status == 'REBALANCING' or duckie.status == 'IDLE':
+                    pass
+                elif duckie.status == 'DRIVINGTOCUSTOMER':
+                    duckie.status = 'IDLE'
+                elif duckie.status == 'DRIVINGWITHCUSTOMER':
+                    print(
+                        '%s is driving with customer but received no commands!'
+                    )
             else:
                 command = commands[duckie_id]
                 if not command['request_id']:

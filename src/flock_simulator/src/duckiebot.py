@@ -114,6 +114,7 @@ class Duckiebot(object):
 
         # Generate random new path if path has only one node left
         if len(self.path) == 1:
+            self.status = 'IDLE'
             self.path = dt_map.getRandomPath(self.path[0])
 
         next_lane = dt_map.nodesToLane([self.path[0], self.path[1]])
