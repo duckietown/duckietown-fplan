@@ -91,7 +91,7 @@ class StateManager(object):
                             request.duckie_id = duckie.id
                             request.pickup_time = self.timestep
                             print(
-                                '%s has been picked up. Waiting time: %d seconds'
+                                '%s has been picked up. Waiting time: %8.2f seconds'
                                 % (request.id,
                                    (request.pickup_time - request.start_time
                                     ) * dt))
@@ -187,7 +187,8 @@ class StateManager(object):
                 status_time.append(duckie.status_times[status] * self.last_dt)
             status_times[status] = status_time
 
-        print('Average waiting time: %d seconds' % np.mean(waiting_times))
+        print('Average waiting time: %8.2f seconds' % np.mean(waiting_times))
         print('Average time spent in ')
         for status in status_list:
-            print('  %s: %d seconds' % (status, np.mean(status_times[status])))
+            print('  %s: %8.2f seconds' % (status,
+                                           np.mean(status_times[status])))
