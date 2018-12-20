@@ -51,10 +51,10 @@ The command message for a single duckie is defined as follows:
 - `geometry_msgs/Twist velocity_command` Velocity commands (linear velocity in `linear.x`, angular velocity in `angular.z`)
 Commands can be given as a path or as velocites. For the former, `on_rails` should be set to `True` in which case the duckie will ignore `velocity_command`, and vice versa.
 
-The "on-rails" duckies follow very simple traffic rules, such as keeping a certain distance from duckies in front and giving right of way to duckies approaching intersections from the right. Also, they stop in front of intersections if there is already a duckie on it. *Note:* The current rules occasionally lead to collisions.
+The "on-rails" duckies follow very simple traffic rules, such as keeping a certain distance from duckies in front and giving right of way to duckies approaching intersections from the right. Also, they stop in front of intersections if there is already a duckie on it. **Note:** The current rules occasionally lead to collisions.
 
 ### Visualization
-The simulation is visualized using rviz. The duckies are shown as meshes of their real-life counterparts, requests shown as spheres (yellow for pick-up, green for drop-off). *Note:* Due to a bug correctly dropped-off requests (green spheres) persist and only disappear after a new request appears).
+The simulation is visualized using rviz. The duckies are shown as meshes of their real-life counterparts, requests shown as spheres (yellow for pick-up, green for drop-off). **Note:** Due to a bug correctly dropped-off requests (green spheres) persist and only disappear after a new request appears).
 
 ### Internal structure
 The simulator represents duckies as instances of the class `Duckiebot` and requests as instances of the class `Request`. A single instance of class `StateManager` is used to represent the entire state of the simulation and coordinate the interaction between duckies, requests and the map. The class `DuckietownMap` contains relevant information of the map and methods for extracting information.
@@ -63,6 +63,57 @@ The simulator represents duckies as instances of the class `Duckiebot` and reque
 The flock planner interacts with the simulator and publishes commands on it.
 
 ### Dispatcher
-The dispatcher receives the state of the simulation and returns paths for each duckie. The currenlty implemented dispatcher is deliberately kept very rudimentary, so it can be improved by users (and in the future hopefully AIDO participants) and tested.
+The dispatcher receives the state of the simulation and returns paths for each duckie. The currently implemented dispatcher is deliberately kept very rudimentary, so it can be improved by users (and in the future hopefully AIDO participants) and tested.
 
+#### Editing the dispatcher
+The dispatcher is found in `flock_planner/src/dispatcher.py` and the dispatching algorithm is implemented and can be edited in the class method `update`. It receives the state as a dictionary and returns a list of paths.
+##### State
+```
+state = {
+    'duckies': {
+        'duckie-0': {
+            'status': 'IDLE',
+            'lane': 'l001',
+        },
+        'duckie-1': {
+            'status': 'IDLE',
+            'lane': 'l042',
+        }, ...
+    },
+    'requests': {
+        'request-0': {
+            'time': 63,  # Timestep of request
+            'duckie_id':
+            'duckie-2',  # Duckie which is serving the request (empty if unassigned)
+            'start_node': 'P13',  # Start node of graph (networkx)
+            'end_node': 'P02',  # End node of graph
+        }, ...
+    }
+}
+```
+##### Paths
+```
+paths = [
+    {
+        'duckie_id': 'duckie-0',
+        'request_id': 'request-2',
+        'path': ['P03', 'P12', 'P08']
+    },
+    {
+        'duckie_id': 'duckie-1',
+        'request_id': None,  # Puts duckie into rebalancing mode
+        'path': ['P03', 'P06']
+    },
+    ...
+]
+```
+- If a duckie does not receive any commands, it drives around randomly with status 'IDLE' and does not pick up any request.
+- The duckie has the status 'DRIVINGTOCUSTOMER' or 'DRIVINGWITHCUSTOMER' if a request_id is given. A path is needed, otherwise the duckie drives around randomly and picks up/drops off the request if it drives by by chance.
+- If a path is given and no request_id, the duckie will follow the path and take the status 'REBALANCING'.
 
+##### Map
+The map is given as a class variable `skeleton_graph` from the `duckietown_world` package. It is documented there in more detail if more information is needed.
+
+`skeleton_graph.G` is a MultiDiGraph from the NetworkX library. Every node represents a fork in the path (i.e. before an intersection), or the merging of paths (after an intersection). The path will be given as a list of nodes, which the shortest one can be easily extracted with the NetworkX library (the shortest might not be the fastest path!). The edges contain the names of the lane it represents (the state gives you the duckie's position as their lanes their currently on). 
+
+`skeleton_graph.root2` contains a dictionary of poses that define the geometry for each lane. This information might be used for instance for generating weights for the lanes (e.g. length of lane), but is not necessary to create a working dispatcher.
