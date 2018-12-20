@@ -28,7 +28,6 @@ class StateManager(object):
         self.requests = {}
         self.filled_requests = {}
         self.t_last_request = 0
-        self.addRequest()
 
     def updateState(self, commands, dt):
         # Give commands

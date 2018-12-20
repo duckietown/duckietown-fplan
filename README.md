@@ -54,7 +54,7 @@ Commands can be given as a path or as velocites. For the former, `on_rails` shou
 The "on-rails" duckies follow very simple traffic rules, such as keeping a certain distance from duckies in front and giving right of way to duckies approaching intersections from the right. Also, they stop in front of intersections if there is already a duckie on it. **Note:** The current rules occasionally lead to collisions.
 
 ### Visualization
-The simulation is visualized using rviz. The duckies are shown as meshes of their real-life counterparts, requests shown as spheres (yellow for pick-up, green for drop-off). **Note:** Due to a bug correctly dropped-off requests (green spheres) persist and only disappear after a new request appears).
+The simulation is visualized using rviz. The duckies are shown as meshes of their real-life counterparts, requests shown as spheres (yellow for pick-up, green for drop-off).
 
 ### Internal structure
 The simulator represents duckies as instances of the class `Duckiebot` and requests as instances of the class `Request`. A single instance of class `StateManager` is used to represent the entire state of the simulation and coordinate the interaction between duckies, requests and the map. The class `DuckietownMap` contains relevant information of the map and methods for extracting information.
