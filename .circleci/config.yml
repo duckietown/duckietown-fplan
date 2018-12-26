@@ -6,7 +6,8 @@ workflows:
       #- test-3.7
       #- test-3.6
       #- test-3.5
-      - test-2.7
+      # - test-2.7
+      - melodic
 jobs:
   test-3.6: &test-template
     environment:
@@ -19,12 +20,18 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Install project deps in a venv
+          name: Install the dependencies
           command: |
             git clone --recursive https://github.com/duckietown/duckietown-world.git
             cd duckietown-world
             pip install -r requirements.txt
             python setup.py develop --no-deps
+      - run:
+              name: Install ROS
+  melodic:
+    <<: *test-template
+    docker:
+      - image: autonomoustuff/docker-builds:melodic-ros-base
   test-3.5:
     <<: *test-template
     docker:
