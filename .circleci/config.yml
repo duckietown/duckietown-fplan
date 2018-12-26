@@ -3,13 +3,13 @@ workflows:
   version: 2
   test:
     jobs:
-      - melodic
       #- test-3.7
       #- test-3.6
       #- test-3.5
-      - test-2.7:
+      - test-2.7
+      - melodic:
           requires:
-            - melodic
+            - test-2.7
 jobs:
   test-3.6: &test-template
     environment:
@@ -28,11 +28,6 @@ jobs:
             cd duckietown-world
             pip install -r requirements.txt
             python setup.py develop --no-deps
-      - run:
-          name: Build duckietown-fplan
-          command: |
-            git submodule update --recursive --remote
-            roscore
   melodic:
     docker:
       - image: autonomoustuff/docker-builds:melodic-ros-base
@@ -48,7 +43,7 @@ jobs:
             catkin init
             catkin config --extend /opt/ros/$ROS_DISTRO
       - run:
-          name: Build
+          name: Build duckietown-fplan
           command: |
             cd ..
             catkin build
