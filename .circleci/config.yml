@@ -47,11 +47,8 @@ jobs:
           command: |
             cd ..
             catkin build >> test_results.txt
-      - test-results-store:
-          path: out-comptests/build_test
-
       - store_artifacts:
-          path: out-comptests/build_test
+          path: test_results.txt
           destination: test
     working_directory: ~/src
   test-3.5:
