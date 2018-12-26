@@ -18,7 +18,7 @@ jobs:
       PATH: /root/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     docker:
       - image: python:3.6
-    working_directory: ~/repo
+    working_directory: ~/src
     steps:
       - checkout
       - run:
@@ -54,10 +54,13 @@ jobs:
           name: Build duckietown-fplan
           command: |
             cd ..
-            catkin build >> test_results.txt
+            catkin build | tee test_results.txt
       - store_artifacts:
           path: ~/test_results.txt
           destination: test/test_results.txt
+      - store_artifacts:
+          path: artifacts
+          destination: artifacts
     working_directory: ~/src
   test-3.5:
     <<: *test-template
