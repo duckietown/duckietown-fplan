@@ -28,6 +28,10 @@ jobs:
             cd duckietown-world
             pip install -r requirements.txt
             python setup.py develop --no-deps
+      - run:
+          name: Build duckietown-fplan
+          command: |
+            pwd:
   melodic:
     docker:
       - image: autonomoustuff/docker-builds:melodic-ros-base
