@@ -6,7 +6,7 @@
     <arg name="n_duckies" default="3"/>
 
     <!-- Seconds between requests (set to 0 for no requests) -->
-    <arg name="t_requests" default="20"/>
+    <arg name="t_requests" default="10"/>
     
     <arg name="rviz_config" default="$(find flock_simulator)/config/$(arg map_name).rviz"/>
 

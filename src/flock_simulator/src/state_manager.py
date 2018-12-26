@@ -19,6 +19,7 @@ class StateManager(object):
 
         # Timestep
         self.timestep = 0
+        self.last_dt = 0
 
         # Duckies
         self.duckies = {}
@@ -28,7 +29,6 @@ class StateManager(object):
         self.requests = {}
         self.filled_requests = {}
         self.t_last_request = 0
-        self.addRequest()
 
     def updateState(self, commands, dt):
         # Give commands
@@ -48,62 +48,82 @@ class StateManager(object):
         self.updateRequests(commands, dt)
 
         self.timestep += 1
+        self.last_dt = dt
 
     def updateRequests(self, commands, dt):
-        for duckie_id, command in commands.items():
-            if command['request_id'] in self.requests:
-                request = self.requests[command['request_id']] if command[
-                    'request_id'] else None
-                duckie = self.duckies[duckie_id]
-            else:
-                # If dispatcher assigns request to duckie that is not available anymore
-                continue
-
-            # Duckie can be IDLE, REBALANCING, DRIVINGTOCUSTOMER, DRIVINGWITHCUSTOMER
-            # Request can be none, WAITING, PICKEDUP, FILLED
-            # command['path'] can be empty or not
-
-            if duckie.status != 'DRIVINGWITHCUSTOMER':
-                if not request:
-                    if command['path']:
-                        duckie.status = 'REBALANCING'
-                        duckie.path = command['path']
-                elif request.status == 'WAITING':
-                    if duckie.reachedNode(request.start_node, self.dt_map):
-                        duckie.status = 'DRIVINGWITHCUSTOMER'
-                        request.status = 'PICKEDUP'
-                        request.duckie_id = duckie.id
-                        request.pickup_time = self.timestep
-                        print('%s has been picked up by %s' % (request.id,
-                                                               duckie.id))
-                    else:
-                        duckie.status = 'DRIVINGTOCUSTOMER'
-                    if command['path']:
-                        duckie.path = command['path']
-                    else:
-                        print('%s assigned to %s but has no path to follow.' %
-                              (duckie.id, request.id))
-                elif request:
-                    print('%s is %s but %s is assigned and %s!' %
-                          (request.id, request.status, duckie.id,
-                           duckie.status))
-            elif duckie.status == 'DRIVINGWITHCUSTOMER':
-                if not request:
+        for duckie_id, duckie in self.duckies.items():
+            if duckie_id not in commands.keys():
+                if duckie.status == 'REBALANCING' or duckie.status == 'IDLE':
+                    pass
+                elif duckie.status == 'DRIVINGTOCUSTOMER':
+                    duckie.status = 'IDLE'
+                elif duckie.status == 'DRIVINGWITHCUSTOMER':
                     print(
-                        '%s is driving with customer but not assigned to a request!'
-                        % duckie.id)
-                elif request.status == 'PICKEDUP':
-                    if duckie.reachedNode(request.end_node, self.dt_map):
-                        duckie.status = 'IDLE'
-                        request.status = 'FILLED'
-                        request.end_time = self.timestep
-                        print('%s has been dropped off by %s' % (request.id,
-                                                                 duckie.id))
-                    if command['path']:
-                        duckie.path = command['path']
-                    else:
-                        print('%s picked up %s but has no path to follow.' %
-                              (duckie.id, request.id))
+                        '%s is driving with customer but received no commands!'
+                    )
+            else:
+                command = commands[duckie_id]
+                if not command['request_id']:
+                    request = None
+                elif command['request_id'] in self.requests:
+                    request = self.requests[command['request_id']] if command[
+                        'request_id'] else None
+                    duckie = self.duckies[duckie_id]
+                else:
+                    # If dispatcher assigns request to duckie that is not available anymore
+                    continue
+
+                # Duckie can be IDLE, REBALANCING, DRIVINGTOCUSTOMER, DRIVINGWITHCUSTOMER
+                # Request can be none, WAITING, PICKEDUP, FILLED
+                # command['path'] can be empty or not
+
+                if duckie.status != 'DRIVINGWITHCUSTOMER':
+                    if not request:
+                        if command['path']:
+                            duckie.status = 'REBALANCING'
+                            duckie.path = command['path']
+                        else:
+                            duckie.status = 'IDLE'
+                    elif request.status == 'WAITING':
+                        if duckie.reachedNode(request.start_node, self.dt_map):
+                            duckie.status = 'DRIVINGWITHCUSTOMER'
+                            request.status = 'PICKEDUP'
+                            request.duckie_id = duckie.id
+                            request.pickup_time = self.timestep
+                            print(
+                                '%s has been picked up. Waiting time: %8.2f seconds'
+                                % (request.id,
+                                   (request.pickup_time - request.start_time
+                                    ) * dt))
+                        else:
+                            duckie.status = 'DRIVINGTOCUSTOMER'
+                        if command['path']:
+                            duckie.path = command['path']
+                        else:
+                            print(
+                                '%s assigned to %s but has no path to follow.'
+                                % (duckie.id, request.id))
+                    elif request:
+                        print('%s is %s but %s is assigned and %s!' %
+                              (request.id, request.status, duckie.id,
+                               duckie.status))
+                elif duckie.status == 'DRIVINGWITHCUSTOMER':
+                    if not request:
+                        print(
+                            '%s is driving with customer but not assigned to a request!'
+                            % duckie.id)
+                    elif request.status == 'PICKEDUP':
+                        if duckie.reachedNode(request.end_node, self.dt_map):
+                            duckie.status = 'IDLE'
+                            request.status = 'FILLED'
+                            request.end_time = self.timestep
+                            print('%s has been dropped off.' % request.id)
+                        if command['path']:
+                            duckie.path = command['path']
+                        else:
+                            print(
+                                '%s picked up %s but has no path to follow.' %
+                                (duckie.id, request.id))
 
         # Move from requests to filled_requests
         for request_id in list(self.requests.keys()):
@@ -151,3 +171,24 @@ class StateManager(object):
                     self.duckies[duckie_id] = Duckiebot(
                         duckie_id, point, self.dt_map)
                     occupied_poses.append(pose)
+
+    def printStatus(self):
+        waiting_times = []
+        for request in self.filled_requests.values():
+            waiting_times.append(
+                (request.pickup_time - request.start_time) * self.last_dt)
+        status_list = [
+            'IDLE', 'REBALANCING', 'DRIVINGTOCUSTOMER', 'DRIVINGWITHCUSTOMER'
+        ]
+        status_times = {}
+        for status in status_list:
+            status_time = []
+            for duckie in self.duckies.values():
+                status_time.append(duckie.status_times[status] * self.last_dt)
+            status_times[status] = status_time
+
+        print('Average waiting time: %8.2f seconds' % np.mean(waiting_times))
+        print('Average time spent in ')
+        for status in status_list:
+            print('  %s: %8.2f seconds' % (status,
+                                           np.mean(status_times[status])))

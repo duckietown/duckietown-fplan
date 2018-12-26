@@ -23,6 +23,12 @@ class Duckiebot(object):
         }
         self.path = []
         self.status = 'IDLE'
+        self.status_times = {
+            'IDLE': 0,
+            'REBALANCING': 0,
+            'DRIVINGTOCUSTOMER': 0,
+            'DRIVINGWITHCUSTOMER': 0
+        }
         self.in_fov = []
         self.collision_level = 0
         if lane and dt_map:
@@ -36,6 +42,8 @@ class Duckiebot(object):
 
         path_command = command['path'] if 'path' in command else None
         self.updateNextPoint(path_command, dt_map)
+
+        self.status_times[self.status] += 1
 
     def initialize(self, point, dt_map):
         # Pose
@@ -106,6 +114,7 @@ class Duckiebot(object):
 
         # Generate random new path if path has only one node left
         if len(self.path) == 1:
+            self.status = 'IDLE'
             self.path = dt_map.getRandomPath(self.path[0])
 
         next_lane = dt_map.nodesToLane([self.path[0], self.path[1]])

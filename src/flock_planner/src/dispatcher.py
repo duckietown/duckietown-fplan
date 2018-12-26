@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import random
 import networkx as nx
 import numpy as np
 from flock_simulator.msg import FlockState, FlockCommand
@@ -13,33 +14,35 @@ class Dispatcher(object):
         self.commands = []
 
     def update(self, state):
-        # EXAMPLE FOR STATE:
-        # state = {
-        #   'duckies': [
-        #       'duckie-0': {
-        #           'status': 'IDLE',
-        #           'lane': 'l001',
-        #       },
-        #       'duckie-1': {
-        #           'status': 'IDLE',
-        #           'lane': 'l042',
-        #       }, ...
-        #   ]
-        #   'requests': [
-        #       'request-0': {
-        #           'time': [time of request],
-        #           'duckie_id': [duckie which is serving the request (empty if unassigned)],
-        #           'start_node': [start node of graph (networkx)],
-        #           'end_node': [end node of graph (networkx)],
-        #       }, ...
-        #   ]
-        # }
+        """
+        EXAMPLE FOR STATE:
+        state = {
+            'duckies': {
+                'duckie-0': {
+                    'status': 'IDLE',
+                    'lane': 'l001',
+                },
+                'duckie-1': {
+                    'status': 'IDLE',
+                    'lane': 'l042',
+                }, ...
+            },
+            'requests': {
+                'request-0': {
+                    'time': 63,  # Timestep of request
+                    'duckie_id': 'duckie-2',  # Duckie which is serving the request (empty if unassigned)
+                    'start_node': 'P13',  # Start node of graph (networkx)
+                    'end_node': 'P02'  # End node of graph
+                }, ...
+            }
+        }
+        """
 
         duckies = state['duckies']
         requests = state['requests']
         paths = []
 
-        # Get open requests
+        # Get open requests and requests already picked up
         open_requests = {}
         requests_with_duckie = {}
         for request_id in requests:
@@ -61,7 +64,6 @@ class Dispatcher(object):
                     for request_id, request in requests_with_duckie.items()
                     if request['duckie_id'] == duckie_id)
                 goal_node = assigned_request['end_node']
-
             else:
                 # find closest open request
                 closest_request_id = None
@@ -78,29 +80,36 @@ class Dispatcher(object):
                     goal_node = assigned_request['start_node']
                     assigned_requests.append(assigned_request_id)
                 else:
-                    continue
+                    # Rebalance duckie with probability 1%
+                    if random.randint(1, 100) == 1:
+                        assigned_request_id = None
+                        goal_node = random.choice(
+                            list(self.skeleton_graph.G.nodes()))
+                    else:
+                        continue
 
             # generate path and assign
             path_pair = self.generatePathPair(duckie_id, assigned_request_id,
                                               current_node, goal_node)
             paths.append(path_pair)
 
-        # generateCommands from path
-        # EXAMPLE FOR PATHS:
-        # paths = [
-        #   {
-        #       'duckie_id': 'duckie-0',
-        #       'request_index': 2,
-        #       'path': [list of nodes]
-        #   },
-        #   {
-        #       'duckie_id': 'duckie-1',
-        #       'request_index': 0,
-        #       'path': [list of nodes]
-        #   }, ...
-        # ]
-
         self.commands = paths
+        """
+        EXAMPLE FOR PATHS:
+        paths = [
+            {
+                'duckie_id': 'duckie-0',
+                'request_id': 'request-2',
+                'path': ['P03', 'P12', 'P08']
+            },
+            {
+                'duckie_id': 'duckie-1',
+                'request_id': None,  # Puts duckie into rebalancing mode
+                'path': ['P03', 'P06']
+            },
+            ...
+        ]
+        """
 
     def getClosestRequest(self, open_requests, node):
         if not open_requests:  # if no open requests
