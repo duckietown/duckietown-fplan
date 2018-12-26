@@ -48,7 +48,7 @@ jobs:
             cd ..
             catkin build >> test_results.txt
       - store_artifacts:
-          path: test_results.txt
+          path: ~/test_results.txt
           destination: test
     working_directory: ~/src
   test-3.5:
