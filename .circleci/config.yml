@@ -28,6 +28,14 @@ jobs:
             cd duckietown-world
             pip install -r requirements.txt
             python setup.py develop --no-deps
+      - run:
+          name: List deps
+          command: |
+            mkdir -p artifacts
+            pip freeze | tee artifacts/pip-freeze.txt
+      - store_artifacts:
+          path: artifacts
+          destination: artifacts
   melodic:
     docker:
       - image: autonomoustuff/docker-builds:melodic-ros-base
