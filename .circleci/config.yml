@@ -31,6 +31,8 @@ jobs:
   melodic:
     docker:
       - image: autonomoustuff/docker-builds:melodic-ros-base
+    steps:
+      - checkout
   test-3.5:
     <<: *test-template
     docker:
