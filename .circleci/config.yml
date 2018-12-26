@@ -6,10 +6,10 @@ workflows:
       #- test-3.7
       #- test-3.6
       #- test-3.5
-      #- test-2.7
+      - test-2.7
       - melodic
-          #requires:
-          #  - test-2.7
+          requires:
+            - test-2.7
 jobs:
   test-3.6: &test-template
     environment:
@@ -46,25 +46,13 @@ jobs:
           name: Build duckietown-fplan
           command: |
             cd ..
-            catkin build
+            catkin build >> test_results.txt
       - test-results-store:
-          path: out-comptests/junit
+          path: out-comptests/build_test
 
       - store_artifacts:
-          path: out-comptests/duckietown_world_tests
-          destination: duckietown_world_tests
-          
-      - store_artifacts:
-          path: artifacts
-          destination: artifacts
-
-      - store_artifacts:
-          path: out_coverage
-          destination: coverage
-
-      - store_artifacts:
-          path: notebooks
-          destination: notebooks
+          path: out-comptests/build_test
+          destination: test
     working_directory: ~/src
   test-3.5:
     <<: *test-template
