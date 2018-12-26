@@ -6,10 +6,10 @@ workflows:
       #- test-3.7
       #- test-3.6
       #- test-3.5
-      - test-2.7
+      #- test-2.7
       - melodic:
-          requires:
-            - test-2.7
+          #requires:
+          #  - test-2.7
 jobs:
   test-3.6: &test-template
     environment:
@@ -45,6 +45,7 @@ jobs:
       - run:
           name: Build duckietown-fplan
           command: |
+            cd ..
             catkin build
       - test-results-store:
           path: out-comptests/junit
