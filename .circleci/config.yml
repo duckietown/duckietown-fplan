@@ -29,7 +29,7 @@ jobs:
   melodic:
     <<: *test-template
     docker:
-      - image: autonomoustuff/docker-builds:melodic-ros-base
+      - image: shadowrobot/build-tools:xenial-kinetic
   test-3.5:
     <<: *test-template
     docker:
