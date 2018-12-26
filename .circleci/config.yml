@@ -46,8 +46,10 @@ jobs:
           name: Build duckietown-fplan
           command: |
             cd ..
+            pwd
             catkin build
     working_directory: ~/src
+
   test-3.5:
     <<: *test-template
     docker:
