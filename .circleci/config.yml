@@ -45,6 +45,7 @@ jobs:
       - run:
           name: Build duckietown-fplan
           command: |
+            ls
             cd ..
             pwd
             ls
