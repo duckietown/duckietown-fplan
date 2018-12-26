@@ -31,7 +31,7 @@ jobs:
       - run:
           name: Build duckietown-fplan
           command: |
-            pwd:
+            pwd
   melodic:
     docker:
       - image: autonomoustuff/docker-builds:melodic-ros-base
