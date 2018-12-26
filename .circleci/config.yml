@@ -32,7 +32,7 @@ jobs:
           name: Build duckietown-fplan
           command: |
             git submodule update --recursive --remote
-            catkin_make
+            catkin build
   melodic:
     docker:
       - image: autonomoustuff/docker-builds:melodic-ros-base
