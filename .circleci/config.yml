@@ -33,6 +33,7 @@ jobs:
           command: |
             cd src
             pwd
+            ls
   melodic:
     docker:
       - image: autonomoustuff/docker-builds:melodic-ros-base
