@@ -58,9 +58,6 @@ jobs:
       - store_artifacts:
           path: ~/test_results.txt
           destination: test/test_results.txt
-      - store_artifacts:
-          path: artifacts
-          destination: artifacts
     working_directory: ~/src
   test-3.5:
     <<: *test-template
