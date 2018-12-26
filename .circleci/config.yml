@@ -47,9 +47,9 @@ jobs:
           command: |
             cd ..
             pwd
+            ls
             catkin build
     working_directory: ~/src
-
   test-3.5:
     <<: *test-template
     docker:
