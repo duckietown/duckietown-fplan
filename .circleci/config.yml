@@ -45,15 +45,6 @@ jobs:
       - run:
           name: Build duckietown-fplan
           command: |
-            pwd
-            ls
-            cd src
-            pwd
-            ls
-            cd ..
-            cd ..
-            pwd
-            ls
             catkin build
       - test-results-store:
           path: out-comptests/junit
