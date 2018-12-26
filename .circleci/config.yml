@@ -10,7 +10,7 @@ workflows:
       # - test-2.7
       - melodic:
         requires:
-          - test: python
+          - python
 jobs:
   test-3.6: &test-template
     environment:
