@@ -156,7 +156,7 @@ class FlockSimulatorNode(object):
                     stamp, '%s' % request.id, "request_link")
 
     def onShutdown(self):
-        self.state_manager.printStatus()
+        self.state_manager.printStatus(n_duckies, t_requests)
         rospy.loginfo('[%s] Shutdown.' % (self.node_name))
 
 

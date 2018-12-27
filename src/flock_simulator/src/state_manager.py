@@ -172,7 +172,7 @@ class StateManager(object):
                         duckie_id, point, self.dt_map)
                     occupied_poses.append(pose)
 
-    def printStatus(self):
+    def printStatus(self, n_duckies, t_requests):
         waiting_times = []
         for request in self.filled_requests.values():
             waiting_times.append(
@@ -187,8 +187,15 @@ class StateManager(object):
                 status_time.append(duckie.status_times[status] * self.last_dt)
             status_times[status] = status_time
 
-        print('Average waiting time: %8.2f seconds' % np.mean(waiting_times))
         print('Average time spent in ')
         for status in status_list:
             print('  %s: %8.2f seconds' % (status,
                                            np.mean(status_times[status])))
+        print('Average waiting time: %8.2f seconds' % np.mean(waiting_times))
+
+        alpha = 0.1
+        delta = 0.33
+        score = np.mean(waiting_times) / (alpha*t_requests + delta*n_duckies)
+
+        print('Score: %8.2f ' %score)
+
